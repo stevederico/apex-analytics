@@ -1,0 +1,13 @@
+{
+  "name": "dottie-feedback-widget",
+  "private": true,
+  "type": "module",
+  "description": "Feedback widget served at /feedback.js (ported from feedback-assistant). Built to dist/ and embedded into the Rust binary.",
+  "scripts": {
+    "build": "vite build && node ./copy-html2canvas.mjs"
+  },
+  "devDependencies": {
+    "html2canvas-pro": "2.5.0",
+    "vite": "8.0.13"
+  }
+}

@@ -1,0 +1,80 @@
+# Dottie Analytics API
+
+> First-party telemetry + web-analytics service (an Umami replacement) served from your own host.
+> Ingests desktop app pings/events, serves the admin reports behind the dashboard, hosts
+> multi-tenant website analytics, and tracks GitHub growth. Deliberately invisible to the
+> public web: `/` is 404, bots disallowed, every response carries `X-Robots-Tag: noindex`.
+
+## Auth
+- Report/admin endpoints: `Authorization: Bearer <DOTTIE_ADMIN_KEY>`. Wrong/missing key → **404** (not 401/403), so endpoints look nonexistent to probes. Comparisons are timing-safe.
+- Web-analytics ingest (`POST /api/send`): public, keyed by the site `write_key` in `payload.website` (unknown → 404).
+- Desktop ingest (`/api/ping`, `/api/events`, `/api/diagnostics`): per-user bearer from /api/register (the shared X-Dottie-Client key is retired).
+- Landing ingest (`/api/landing-event`, `/api/landing-visit`): public but origin-locked to `LANDING_ALLOWED_ORIGIN` (unset → refused).
+- REST body cap 4 KiB (batch/import routes larger). 15s timeout → 408. Bad JSON → 400 `{"error":"invalid_json"}`.
+
+## Range params (shared by every report read)
+Precedence: `all=1|true` (everything) → `from=YYYY-MM-DD&to=YYYY-MM-DD` (inclusive end, ≤366d) → `days=N` (rolling, 1–180, default 30) → `hours=N` (rolling, 1–8760, per-endpoint default). `GET /api/stats/series` routes a present `hours` param to hourly buckets.
+
+## Core / ingest
+- GET /health — public status `{"status":"ok"}`
+- GET /api/version — public client-version policy `{latest,minimum_required,download_url}`
+- GET /robots.txt — disallow all
+- GET /script.js — public Umami-compatible tracker JS (posts to /api/send)
+- POST /api/register — public bootstrap; upsert user by email → `{ok,token}` (per-user bearer)
+- POST /api/ping — desktop DAU/MAU ping
+- POST /api/events — desktop single product event (optional event_id for dedupe)
+- POST /api/events/batch — desktop batch (max 100, gzip ok)
+- POST /api/diagnostics — desktop redacted diagnostic bundle
+- POST /api/send (alias POST /api/collect) — public web-analytics ingest, write_key in body → 204
+- GET /api/stats — top-line users/dau/wau/mau/stickiness/countries (admin)
+
+## Reports (admin bearer)
+- GET /api/report/daily?format=md — desktop daily runbook composite
+- GET /api/report/site-daily?format=md — all-sites 24h roll-up
+- GET /api/stats/series — metric ∈ {dau,events,errors,signups,pings} (required)
+- GET /api/stats/active — daily-active sparkline (days 1–180)
+- GET /api/stats/active-users — distinct active installs over window
+- GET /api/stats/top-events — top 20 event names
+- GET /api/stats/retention — weekly cohort d1/d7/d30
+- GET /api/stats/activation — activation funnel by signup time
+- GET /api/stats/funnel — funnel.* step conversion
+- GET /api/stats/lifecycle — weekly new/returning/resurrecting/dormant (weeks 1–52)
+- GET /api/stats/attribution — signups by landing UTM
+- GET /api/stats/errors — error.thrown hotspots by file/function/line
+- GET /api/stats/errors-by-version — error.* by version+name
+- GET /api/stats/crashes — crash/hang grouping
+- GET /api/stats/new-errors — signatures new in last 24h
+- GET /api/stats/event-details?name= — raw props drill-down for one event (name required)
+- GET /api/stats/issues?status= — grouped error issues
+- PATCH /api/issues/{id} (POST alias) — set status active|resolved
+- GET /api/stats/users?limit= — full user list
+- GET /api/stats/breakdown?by= — version|os|country
+- GET /api/stats/landing-events — named landing events by name
+- GET /api/stats/landing-funnel — visited→downloaded→installed→signed_up
+- POST /api/landing-event — public origin-locked landing event ingest
+- DELETE /api/landing/{iid} (POST alias) — admin purge one visitor
+- GET /api/diagnostics/list, GET /api/diagnostics/{id} — read diagnostic bundles
+
+## Sites (multi-tenant, admin bearer)
+- GET /api/sites — all properties + lifetime counts (site-switcher source)
+- POST /api/sites — create a property (returns write_key); optional github_repo link
+- GET /api/site/summary?site= — range KPIs + prev period
+- GET /api/site/series?site=&metric= — metric ∈ {pageviews,events,visitors,visits}
+- GET /api/site/events?site= — custom-event breakdown
+- GET /api/site/pages?site=&kind= — kind ∈ {path,url,entry,exit}
+- GET /api/site/referrers?site= — top referrers
+- GET /api/site/breakdown?site=&by= — by ∈ {browser,os,device,country}
+- POST /api/import/site-events — bulk historical backfill (max 2000/call, gzip ok)
+
+## Growth (admin bearer)
+- GET /api/downloads, /daily, /latest, /repos — GitHub release downloads; POST /snapshot, /backfill
+- GET /api/metrics, /daily, /latest — metric ∈ {stars,forks,clones,views} (required); POST /snapshot
+- GET /api/metrics/wow?metric= (also accepts downloads) and GET /api/downloads/wow — rolling week-over-week growth rate (%); each point vs the latest snapshot at-or-before date−7d; growth briefs also carry latest wow per metric
+- GET /api/repos, POST /api/repos, PATCH/DELETE /api/repos/{id} — tracked-repo registry (kind + linked_site_id)
+- POST /api/import/github-growth — bulk downloads+metrics load (max 10,000 rows)
+
+## Dashboard data path
+The browser dashboard uses gRPC-Web (`dottie.admin.v1.Admin/*`, same admin bearer, wrong key → NOT_FOUND) — unary Get* + server-streaming StreamStats/Series/Issues/Site*. REST `/api/*` above stays for scripts/desktop/public ingest.
+
+## Human docs
+`https://<your-host>/docs`

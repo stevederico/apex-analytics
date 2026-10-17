@@ -1,0 +1,91 @@
+# Rust (axum + sqlx) image for dottie-analytics. Multi-stage: a Debian-based
+# Rust builder compiles a release binary, then a tiny distroless runtime ships
+# just that binary.
+#
+# Why distroless/cc (glibc) and NOT scratch/static:
+#   sqlx's sqlite driver pulls in `libsqlite3-sys`, which COMPILES SQLite into
+#   the binary (bundled, JSON1 enabled) — so there is NO external libsqlite3
+#   runtime dep. But the crate's build links against the default Debian glibc
+#   toolchain (not musl), so the binary is dynamically linked to libc/libgcc.
+#   `gcr.io/distroless/cc-debian12` provides exactly those (glibc + libgcc +
+#   libstdc++) and nothing else — no shell, no package manager — keeping the
+#   image small while satisfying the dynamic loader. The builder stage runs
+#   `ldd` to PROVE the only dynamic deps are the C runtime (no libsqlite3).
+#
+# Migrations: `sqlx::migrate!("./migrations")` embeds the .sql files into the
+# binary AT COMPILE TIME, so they are NOT needed at runtime. We still COPY the
+# migrations dir into the builder (the macro reads it during `cargo build`); the
+# runtime stage deliberately omits it to keep the image minimal.
+
+# ---- dashboard (node) ------------------------------------------------------
+# The admin dashboard is a React/Vite SPA (backend-rust/dashboard). Build it to
+# dist/ here, then hand the built assets to the Rust stage, which embeds them
+# into the binary at compile time (rust-embed). Keeps the runtime a single
+# distroless binary — no node, no static dir shipped.
+FROM node:22-slim AS dashboard
+WORKDIR /dash
+COPY backend-rust/dashboard/package.json backend-rust/dashboard/package-lock.json ./
+RUN npm ci
+COPY backend-rust/dashboard/ ./
+# vite.config reads ../../CHANGELOG.md for __DOTTIE_VERSION__ (Settings shows it);
+# without this the prod dashboard reported 0.0.0.
+COPY CHANGELOG.md /CHANGELOG.md
+RUN npm run build
+
+# ---- builder ---------------------------------------------------------------
+FROM rust:1-slim-bookworm AS builder
+WORKDIR /build
+
+# The libsqlite3-sys bundled build compiles C, which needs a C toolchain.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gcc libc6-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the crate (Cargo.toml/lock, sources, migrations embedded by the macro,
+# proto + build.rs for tonic codegen of the admin gRPC service).
+COPY backend-rust/Cargo.toml backend-rust/Cargo.lock ./
+COPY backend-rust/build.rs ./
+COPY backend-rust/proto ./proto
+COPY backend-rust/src ./src
+COPY backend-rust/migrations ./migrations
+# The public API docs page (docs/index.html + assets) is embedded via rust-embed
+# (#[folder = "docs"]) at compile time, so the folder must be present in the
+# builder — otherwise the derive macro fails to compile.
+COPY backend-rust/docs ./docs
+# The built dashboard SPA is embedded via rust-embed at compile time (globs
+# dashboard/dist), so only the built assets need to be present — not the source
+# or node_modules. Pulled from the node stage above.
+COPY --from=dashboard /dash/dist ./dashboard/dist
+# The feedback widget (/feedback.js) is embedded the same way. Its dist/ is
+# committed (a 12 KB bundle + the pinned html2canvas vendor file), so it is
+# copied as-is rather than rebuilt in a node stage.
+COPY backend-rust/widget/dist ./widget/dist
+
+RUN cargo build --release
+
+# VERIFY at build time: the binary must NOT pull an external libsqlite3, and its
+# only dynamic deps should be the C runtime that distroless/cc provides. Build
+# FAILS loudly if libsqlite3 ever leaks in as a dynamic dependency.
+RUN ldd target/release/dottie-analytics \
+    && if ldd target/release/dottie-analytics | grep -qi sqlite; then \
+         echo "FAIL: external libsqlite3 dynamic dependency present" >&2; exit 1; \
+       fi \
+    && echo "OK: SQLite is statically bundled (no external libsqlite3)"
+
+# ---- runtime ---------------------------------------------------------------
+# distroless/cc-debian12: glibc + libgcc + libstdc++, no shell, no package mgr.
+FROM gcr.io/distroless/cc-debian12
+
+COPY --from=builder /build/target/release/dottie-analytics /usr/local/bin/dottie-analytics
+
+# Runtime config. PORT/DB_PATH mirror server.js defaults; the auth keys and
+# version policy are supplied by the deploy env (Railway). DB_PATH points at a
+# writable path the platform mounts.
+ENV PORT=8080 \
+    DB_PATH=/data/dottie-api.db \
+    RUST_LOG=info
+# DOTTIE_ADMIN_KEY / DOTTIE_LATEST_VERSION /
+# DOTTIE_MIN_VERSION / DOTTIE_DOWNLOAD_URL are injected at deploy time.
+
+EXPOSE 8080
+CMD ["/usr/local/bin/dottie-analytics"]

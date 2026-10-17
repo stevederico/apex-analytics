@@ -1,0 +1,7 @@
+/node_modules
+bun.lock
+# dist/ is embedded into the Rust binary by rust-embed at compile time, so it
+# must be committed (overrides the global ~/.gitignore dist/ rule) — this keeps
+# cargo build/test working without the node toolchain. Docker rebuilds it fresh.
+!dist/
+!dist/**

@@ -1,0 +1,155 @@
+// Admin dashboard API over gRPC-Web. REST /api/* stays for desktop, scripts, and
+// public ingest; the SPA at /dashboard talks to this service instead.
+syntax = "proto3";
+
+package dottie.admin.v1;
+
+service Admin {
+  // ---- unary (one-shot, same shapes as REST) ----
+  rpc GetStats(Empty) returns (JsonBody);
+  rpc GetSeries(SeriesRequest) returns (JsonBody);
+  rpc GetRetention(WeeksRequest) returns (JsonBody);
+  rpc GetActivation(HoursRequest) returns (JsonBody);
+  rpc GetFunnel(HoursRequest) returns (JsonBody);
+  rpc GetLifecycle(WeeksRequest) returns (JsonBody);
+  rpc GetAttribution(HoursRequest) returns (JsonBody);
+  rpc GetBreakdown(BreakdownRequest) returns (JsonBody);
+  rpc GetUsers(UsersRequest) returns (JsonBody);
+  rpc GetIssues(IssuesRequest) returns (JsonBody);
+  rpc PatchIssue(PatchIssueRequest) returns (JsonBody);
+  rpc GetLandingEvents(HoursRequest) returns (JsonBody);
+  rpc GetLandingFunnel(HoursRequest) returns (JsonBody);
+  rpc ListSites(Empty) returns (JsonBody);
+  rpc GetSiteSummary(SiteRangeRequest) returns (JsonBody);
+  rpc GetSiteSeries(SiteSeriesRequest) returns (JsonBody);
+  rpc GetSiteEvents(SiteEventsRequest) returns (JsonBody);
+  rpc GetSitePages(SitePagesRequest) returns (JsonBody);
+  rpc GetSiteReferrers(SiteRangeRequest) returns (JsonBody);
+  rpc GetSiteBreakdown(SiteBreakdownRequest) returns (JsonBody);
+
+  // ---- server streaming (xAI-style live feed) ----
+  // First snapshot immediately, then re-poll; emit only when JSON changes.
+  // interval_ms default 3000, clamped [1000, 60000]. Client cancels = hangup.
+  rpc StreamStats(StreamOpts) returns (stream JsonBody);
+  rpc StreamSeries(SeriesStreamRequest) returns (stream JsonBody);
+  rpc StreamIssues(IssuesStreamRequest) returns (stream JsonBody);
+  rpc StreamSiteSummary(SiteSummaryStreamRequest) returns (stream JsonBody);
+  rpc StreamSiteSeries(SiteSeriesStreamRequest) returns (stream JsonBody);
+}
+
+message Empty {}
+
+// Same JSON shapes as the matching REST /api/* responses (reused report layer).
+message JsonBody {
+  string json = 1;
+}
+
+message SeriesRequest {
+  string metric = 1;
+  string days = 2;
+  string from = 3;
+  string to = 4;
+}
+
+message WeeksRequest {
+  string weeks = 1;
+}
+
+message HoursRequest {
+  string hours = 1;
+}
+
+message BreakdownRequest {
+  string by = 1;
+}
+
+message UsersRequest {
+  string limit = 1;
+}
+
+message IssuesRequest {
+  string status = 1;
+}
+
+message PatchIssueRequest {
+  int64 id = 1;
+  string status = 2;
+  // Build the fix ships in (optional). Sightings from older builds then bump
+  // count without flipping a resolved issue back to `regressed`.
+  string version = 3;
+}
+
+message SiteRangeRequest {
+  string site = 1;
+  string days = 2;
+  string from = 3;
+  string to = 4;
+  string hours = 5;
+}
+
+message SiteSeriesRequest {
+  string site = 1;
+  string metric = 2;
+  string days = 3;
+  string from = 4;
+  string to = 5;
+}
+
+message SiteEventsRequest {
+  string site = 1;
+  string hours = 2;
+}
+
+message SitePagesRequest {
+  string site = 1;
+  string kind = 2;
+  string days = 3;
+  string from = 4;
+  string to = 5;
+  string hours = 6;
+}
+
+message SiteBreakdownRequest {
+  string site = 1;
+  string by = 2;
+  string days = 3;
+  string from = 4;
+  string to = 5;
+  string hours = 6;
+}
+
+// Live-stream options (like xAI GetCompletionChunk — open stream, chunks arrive).
+message StreamOpts {
+  uint32 interval_ms = 1;
+}
+
+message SeriesStreamRequest {
+  string metric = 1;
+  string days = 2;
+  string from = 3;
+  string to = 4;
+  uint32 interval_ms = 5;
+}
+
+message IssuesStreamRequest {
+  string status = 1;
+  uint32 interval_ms = 2;
+}
+
+message SiteSummaryStreamRequest {
+  string site = 1;
+  string days = 2;
+  string from = 3;
+  string to = 4;
+  string hours = 5;
+  uint32 interval_ms = 6;
+}
+
+message SiteSeriesStreamRequest {
+  string site = 1;
+  string metric = 2;
+  string days = 3;
+  string from = 4;
+  string to = 5;
+  uint32 interval_ms = 6;
+}

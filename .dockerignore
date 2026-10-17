@@ -1,0 +1,5 @@
+**/node_modules
+**/target
+backend-rust/dashboard/dist
+backend-rust/dashboard/bun.lock
+.git

@@ -1,0 +1,12 @@
+.env
+.env.local
+node_modules/
+**/databases/*.db
+**/databases/*.db-journal
+**/databases/*.db-wal
+**/databases/*.db-shm
+.DS_Store
+
+# LLVM profiling artifacts
+*.profraw
+backups/

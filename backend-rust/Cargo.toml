@@ -1,0 +1,63 @@
+[package]
+name = "dottie-analytics"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+# Mainstream Rust web stack (axum + tokio + sqlx) — the pattern most devs use
+# in production. Bigger dependency tree than a hand-rolled server, in exchange
+# for batteries-included HTTP correctness, async, compile-time-checked SQL, and
+# first-class middleware/observability.
+[dependencies]
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace", "timeout", "limit", "set-header", "decompression-gzip"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "macros", "migrate"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+# Embeds the built dashboard SPA (dashboard/dist) into the binary at compile
+# time, so the "one distroless binary, no static dir" deploy model is preserved
+# even though the admin UI is now a Vite bundle instead of a single HTML file.
+rust-embed = "8"
+# Cookieless visitor/session hashing for the /api/collect web-analytics ingest
+# (salted SHA-256 → non-reversible distinct_id, GDPR-friendly). Already in the
+# dependency tree transitively via sqlx, so no new download.
+sha2 = "0.10"
+# gRPC-Web for the admin dashboard SPA (REST /api/* stays for desktop/scripts).
+# Server streaming (xAI-style) needs tokio mpsc → ReceiverStream.
+tonic = { version = "0.13", features = ["transport"] }
+tonic-web = "0.13"
+prost = "0.13"
+tokio-stream = { version = "0.1", features = ["sync"] }
+# ReaderStream for GET /api/ops/db/backup (streams the VACUUM INTO copy).
+# Already in the tree via hyper/tower-http.
+tokio-util = { version = "0.7", features = ["io"] }
+# GitHub API client for growth-chart merge (downloads/stars/forks/clones/views).
+# `stream` powers the Dottie Pro relay: SSE bytes are passed through to the
+# desktop client unbuffered via `Response::bytes_stream()`.
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+# HMAC-SHA256 for HS256 JWT bearers (see src/jwt.rs).
+hmac = "0.12"
+hex = "0.4"
+
+[build-dependencies]
+tonic-build = "0.13"
+protoc-bin-vendored = "3"
+
+# Dev-only: `tower`'s util feature for `ServiceExt::oneshot` (drives the router
+# in integration tests without a network listener). `tokio` macros/rt for the
+# `#[tokio::test]` attribute on async tests.
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+# gzip a request body in the batch integration test (already in the tree via
+# tower-http's decompression-gzip feature; named here for the test to use).
+flate2 = "1"
+http-body-util = "0.1"
+
+[profile.release]
+opt-level = 3
+lto = true

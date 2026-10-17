@@ -1,0 +1,27 @@
+{
+  "name": "dottie-dashboard",
+  "private": true,
+  "type": "module",
+  "description": "dottie-analytics admin dashboard — React/Vite skateboard app, built to dist/ and embedded into the Rust binary (served at /dashboard).",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run typecheck && vite build",
+    "typecheck": "tsc -p tsconfig.json",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@stevederico/skateboard-ui": "4.11.0",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.0",
+    "@types/node": "25.9.1",
+    "@types/react": "19.2.16",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react-swc": "4.3.1",
+    "tailwindcss": "4.3.0",
+    "typescript": "6.0.3",
+    "vite": "8.0.13"
+  }
+}

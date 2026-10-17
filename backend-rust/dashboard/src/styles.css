@@ -1,0 +1,120 @@
+@import "@stevederico/skateboard-ui/styles.css";
+
+/* Tailwind must scan the skateboard-ui component classes (node_modules is
+   ignored by default) plus this app's own source. */
+@source "../node_modules/@stevederico/skateboard-ui/dist";
+@source "./";
+
+/* ── House brutalist design system (orange accent, Geist Mono, zero radius) ──
+   Origin/spec: brain refs/brutalist-theme.md. Dark-first; .dark toggled by the
+   pre-paint script in index.html and the in-app theme toggle. */
+
+@theme {
+  --color-app: oklch(0.67 0.22 45);        /* xAI orange #ff6308 */
+  --color-success: oklch(0.72 0.19 142);
+  --color-success-foreground: oklch(0.98 0.02 142);
+  --color-warning: oklch(0.78 0.18 85);
+  --color-warning-foreground: oklch(0.98 0.02 85);
+  --color-bad: oklch(0.63 0.24 25);
+}
+
+.theme-brutalist { --radius: 0rem; --color-app: oklch(0.67 0.22 45); }
+
+.dark.theme-brutalist {
+  --background: #000000;
+  --foreground: oklch(0.985 0 0);
+  /* Lift cards off pure black so KPI/chart/table containers read clearly. */
+  --card: #141414;
+  --card-foreground: oklch(0.985 0 0);
+  --popover: #1a1a1a;
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.055 0 0);
+  --secondary: #1a1a1a;
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: #1a1a1a;
+  --muted-foreground: oklch(0.68 0.01 260);
+  --accent: #1a1a1a;
+  --accent-foreground: oklch(0.985 0 0);
+  --border: oklch(0.42 0.014 260);
+  --input: oklch(0.45 0.012 260);
+  --ring: oklch(0.67 0.22 45);
+  --sidebar: #000000;
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.985 0 0);
+  --sidebar-primary-foreground: oklch(0.055 0 0);
+  --sidebar-accent: #141414;
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.42 0.014 260);
+  --sidebar-ring: oklch(0.67 0.22 45);
+}
+
+.theme-brutalist:not(.dark) {
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.1 0 0);
+  --card: oklch(0.97 0 0);
+  --card-foreground: oklch(0.1 0 0);
+  --popover: oklch(0.99 0 0);
+  --popover-foreground: oklch(0.1 0 0);
+  --primary: oklch(0.1 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.93 0 0);
+  --secondary-foreground: oklch(0.1 0 0);
+  --muted: oklch(0.93 0 0);
+  --muted-foreground: oklch(0.45 0.01 260);
+  --accent: oklch(0.95 0 0);
+  --accent-foreground: oklch(0.1 0 0);
+  --border: oklch(0.85 0 0);
+  --input: oklch(0.85 0 0);
+  --ring: oklch(0.67 0.22 45);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.1 0 0);
+  --sidebar-primary: oklch(0.1 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.95 0 0);
+  --sidebar-accent-foreground: oklch(0.1 0 0);
+  --sidebar-border: oklch(0.85 0 0);
+  --sidebar-ring: oklch(0.67 0.22 45);
+}
+
+/* Mono uppercase headings + sidebar/nav labels. */
+.theme-brutalist h1,
+.theme-brutalist h2,
+.theme-brutalist [data-sidebar="menu-button"] > span,
+.theme-brutalist [data-sidebar="group-label"] {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 400;
+}
+
+/* Active sidebar row — orange dot, no fill. */
+[data-sidebar="menu-button"][data-active="true"] {
+  background-color: transparent !important;
+  color: var(--foreground) !important;
+  position: relative;
+  overflow: visible !important;
+}
+[data-sidebar="menu-button"][data-active="true"]::before {
+  content: '';
+  position: absolute;
+  left: -0.35rem;
+  top: 50%;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background-color: var(--color-app);
+  transform: translateY(-50%);
+}
+[data-sidebar="menu-button"] { color: var(--muted-foreground); }
+[data-sidebar="menu-button"]:hover { color: var(--foreground); }
+
+/* Pointer cursor on interactive elements. */
+@layer base {
+  a[href], button:not(:disabled), [role='button']:not(:disabled),
+  label[for], summary, select:not(:disabled),
+  [data-slot='command-item']:not([data-disabled='true']) { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+}
+
+html, body { background-color: var(--background); }

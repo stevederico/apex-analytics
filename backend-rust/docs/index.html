@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dottie Analytics API</title>
+    <link rel="icon" href="/docs/favicon.ico">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #ffffff; --bg-alt: #f8f9fa; --bg-code: #0f172a; --bg-sidebar: #f8f9fa;
+            --text: #1a1a2e; --text-muted: #64748b; --text-code: #e2e8f0;
+            --border: #e2e8f0; --accent: #3b82f6; --accent-light: #eff6ff;
+            --green: #16a34a; --green-bg: #f0fdf4; --blue: #2563eb; --blue-bg: #eff6ff;
+            --yellow: #ca8a04; --yellow-bg: #fefce8; --purple: #9333ea; --purple-bg: #faf5ff;
+            --red: #dc2626; --red-bg: #fef2f2;
+        }
+        html.dark {
+            --bg: #0f172a; --bg-alt: #1e293b; --bg-code: #020617; --bg-sidebar: #1e293b;
+            --text: #e2e8f0; --text-muted: #94a3b8; --text-code: #e2e8f0;
+            --border: #334155; --accent: #60a5fa; --accent-light: rgba(59,130,246,0.1);
+            --green: #4ade80; --green-bg: rgba(22,163,74,0.15);
+            --blue: #60a5fa; --blue-bg: rgba(37,99,235,0.15);
+            --yellow: #facc15; --yellow-bg: rgba(202,138,4,0.15);
+            --purple: #c084fc; --purple-bg: rgba(147,51,234,0.15);
+            --red: #f87171; --red-bg: rgba(220,38,38,0.15);
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; color: var(--text); background: var(--bg); line-height: 1.6; }
+        code, pre { font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace; }
+
+        /* Layout */
+        .layout { display: flex; height: 100vh; }
+        .sidebar { width: 240px; flex-shrink: 0; border-right: 1px solid var(--border); background: var(--bg-sidebar); overflow-y: auto; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 16px 16px 12px; }
+        .sidebar-logo { display: flex; align-items: center; gap: 5px; }
+        .sidebar-logo img { width: 28px; height: 28px; }
+        .sidebar-logo .name { font-size: 20px; font-weight: 600; color: var(--text); }
+        .sidebar-logo .api { font-size: 20px; font-weight: 300; color: var(--accent); margin-left: 8px; }
+        .sidebar-search { margin: 12px 16px; }
+        .sidebar-search-btn { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 10px; font-size: 13px; color: var(--text-muted); border: 1px solid var(--border); border-radius: 8px; background: var(--bg); cursor: pointer; font-family: inherit; }
+        .sidebar-search-btn:hover { border-color: var(--text-muted); }
+        .sidebar-search-btn kbd { font-size: 11px; padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-alt); margin-left: auto; }
+        .sidebar-search-btn svg { flex-shrink: 0; }
+        .sidebar-top-row { display: flex; align-items: center; justify-content: space-between; }
+        .theme-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text-muted); cursor: pointer; transition: all 0.15s; flex-shrink: 0; }
+        .theme-btn:hover { color: var(--text); border-color: var(--text-muted); }
+        .sidebar-nav { flex: 1; overflow-y: auto; padding: 8px; }
+        .nav-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 12px; font-size: 13px; color: var(--text-muted); text-decoration: none; border-radius: 6px; cursor: pointer; border: none; background: none; text-align: left; font-family: inherit; transition: all 0.15s; }
+        .nav-item svg { flex-shrink: 0; opacity: 0.5; }
+        .nav-item.active svg { opacity: 1; }
+        .nav-item:hover { color: var(--text); background: var(--bg); }
+        .nav-item.active { color: var(--accent); background: var(--accent-light); font-weight: 500; }
+        .nav-group-label { display: flex; align-items: center; gap: 4px; padding: 12px 4px 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); cursor: pointer; border: none; background: none; width: 100%; text-align: left; font-family: inherit; }
+        .nav-group-label:hover { color: var(--text); }
+        .nav-children { padding-left: 12px; border-left: 1px solid var(--border); margin-left: 8px; }
+        .llms-link { display: flex; align-items: center; gap: 4px; padding: 4px 10px; font-size: 12px; color: var(--text-muted); border: 1px solid var(--border); border-radius: 8px; text-decoration: none; transition: all 0.15s; font-family: 'SF Mono', 'Monaco', 'Menlo', monospace; }
+        .llms-link:hover { color: var(--text); border-color: var(--text-muted); }
+
+        /* Main */
+        .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--bg); }
+        .topbar-title { font-size: 20px; font-weight: 600; color: var(--text); }
+        .topbar-right { display: flex; align-items: center; gap: 12px; }
+        .lang-toggle { display: flex; background: var(--bg-alt); border-radius: 8px; padding: 2px; border: 1px solid var(--border); }
+        .lang-btn { padding: 4px 10px; font-size: 12px; border: none; background: none; color: var(--text-muted); cursor: pointer; border-radius: 6px; font-family: inherit; transition: all 0.15s; }
+        .lang-btn.active { background: var(--bg); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .version-badge { display: flex; align-items: center; gap: 4px; padding: 4px 10px; font-size: 12px; color: var(--text-muted); border: 1px solid var(--border); border-radius: 8px; background: var(--bg-alt); cursor: default; font-family: inherit; }
+        .version-badge svg { flex-shrink: 0; }
+        .content { flex: 1; overflow-y: auto; scroll-behavior: smooth; }
+
+        /* Sections */
+        .section { border-bottom: 1px solid var(--border); }
+        .section-header { padding: 32px 32px 16px; }
+        .section-header h2 { display: flex; align-items: center; font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+        .section-header p { font-size: 14px; color: var(--text-muted); max-width: 640px; }
+        .section-header .badge { flex-shrink: 0; font-size: 11px; padding: 2px 8px; background: var(--accent-light); color: var(--accent); border-radius: 4px; margin-left: 8px; font-weight: 500; }
+        .intro { padding: 32px; padding-top: 16px; border-bottom: 1px solid var(--border); }
+        .intro .section-header { padding: 0; margin-bottom: 16px; }
+        .intro p { font-size: 14px; color: var(--text-muted); max-width: 640px; line-height: 1.7; margin-bottom: 16px; }
+        .intro code { padding: 2px 6px; background: var(--bg-alt); border-radius: 4px; font-size: 12px; border: 1px solid var(--border); }
+        .base-url code { padding: 4px 10px; background: var(--bg-code); color: #4ade80; font-size: 12px; border-radius: 4px; }
+
+        /* Endpoint */
+        .endpoint { padding: 24px 32px; }
+        .endpoint + .endpoint { border-top: 1px solid color-mix(in srgb, var(--border), transparent 50%); }
+        .ep-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+        @media (max-width: 900px) { .ep-row { grid-template-columns: 1fr; } }
+        .ep-left {}
+        .ep-right {}
+        .ep-path { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .method { display: inline-block; padding: 2px 8px; font-size: 11px; font-weight: 700; border-radius: 4px; text-transform: uppercase; }
+        .method-get { color: var(--green); background: var(--green-bg); }
+        .method-post { color: var(--blue); background: var(--blue-bg); }
+        .method-put { color: var(--yellow); background: var(--yellow-bg); }
+        .method-patch { color: var(--purple); background: var(--purple-bg); }
+        .method-delete { color: var(--red); background: var(--red-bg); }
+        .method-ws { color: var(--purple); background: var(--purple-bg); }
+        .ep-path code { font-size: 14px; font-weight: 500; color: var(--text); }
+        .ep-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
+
+        /* Params */
+        .params-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 6px; }
+        .params-table { width: 100%; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
+        .param-row { display: flex; align-items: baseline; gap: 12px; padding: 8px 12px; font-size: 13px; }
+        .param-row + .param-row { border-top: 1px solid var(--border); }
+        .param-name { color: var(--accent); font-weight: 500; font-family: 'SF Mono', monospace; font-size: 12px; flex-shrink: 0; }
+        .param-type { color: var(--text-muted); font-size: 11px; flex-shrink: 0; }
+        .param-desc { color: var(--text-muted); }
+
+        /* Code blocks */
+        .code-block { background: var(--bg-code); border-radius: 8px; overflow: hidden; }
+        .code-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .code-header .lang-tabs { display: flex; gap: 4px; }
+        .code-header .lang-tab { padding: 3px 8px; font-size: 11px; border: none; background: none; color: #94a3b8; cursor: pointer; border-radius: 4px; font-family: inherit; }
+        .code-header .lang-tab.active { background: rgba(255,255,255,0.1); color: #fff; }
+        .copy-btn { padding: 4px 8px; font-size: 11px; color: #94a3b8; background: none; border: none; cursor: pointer; border-radius: 4px; font-family: inherit; display: flex; align-items: center; gap: 4px; }
+        .copy-btn:hover { color: #fff; }
+        .code-body { padding: 16px; overflow-x: auto; }
+        .code-body pre { font-size: 12px; color: var(--text-code); line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+
+        /* Response preview */
+        .response-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin: 12px 0 6px; }
+        .response-block { padding: 12px 16px; background: #0f172a; border-radius: 0 0 8px 8px; overflow-x: auto; border: 1px solid #1e293b; border-top: 1px solid #1e293b; }
+        .response-block pre { font-size: 12px; color: #e2e8f0; line-height: 1.5; white-space: pre-wrap; }
+
+        /* Auth section */
+        .auth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 0 32px 32px; }
+        @media (max-width: 900px) { .auth-grid { grid-template-columns: 1fr; } }
+        .auth-box { border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+        .auth-box code { font-size: 14px; }
+        .auth-box .hint { font-size: 12px; color: var(--text-muted); margin-top: 10px; }
+        .auth-box .hint code { font-size: 11px; padding: 1px 5px; background: var(--bg-alt); border-radius: 3px; border: 1px solid var(--border); }
+
+        /* Search modal */
+        .search-overlay { display: none; position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.4); align-items: flex-start; justify-content: center; padding-top: 10vh; }
+        .search-overlay.open { display: flex; }
+        .search-modal { background: var(--bg); width: 100%; max-width: 560px; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden; }
+        .search-input-wrap { display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-bottom: 1px solid var(--border); }
+        .search-input-wrap svg { color: var(--text-muted); flex-shrink: 0; }
+        .search-input { flex: 1; border: none; background: none; font-size: 15px; color: var(--text); outline: none; font-family: inherit; }
+        .search-input::placeholder { color: var(--text-muted); }
+        .search-results { max-height: 400px; overflow-y: auto; padding: 8px; }
+        .search-results-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding: 8px 12px 4px; }
+        .search-result { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 8px 12px; border: none; background: none; border-radius: 8px; cursor: pointer; font-family: inherit; transition: background 0.1s; }
+        .search-result:hover, .search-result.selected { background: var(--accent); }
+        .search-result:hover .search-result-title, .search-result.selected .search-result-title { color: #fff; }
+        .search-result:hover .search-result-desc, .search-result.selected .search-result-desc { color: rgba(255,255,255,0.7); }
+        .search-result:hover .search-result-method, .search-result.selected .search-result-method { background: rgba(255,255,255,0.2); color: #fff; }
+        .search-result-method { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
+        .search-result-info { flex: 1; min-width: 0; }
+        .search-result-title { font-size: 13px; font-weight: 500; color: var(--text); }
+        .search-result-desc { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .search-empty { padding: 32px; text-align: center; font-size: 13px; color: var(--text-muted); }
+        .search-footer { display: flex; align-items: center; gap: 16px; padding: 8px 16px; border-top: 1px solid var(--border); background: var(--bg-alt); font-size: 11px; color: var(--text-muted); }
+        .search-footer kbd { font-size: 10px; padding: 1px 4px; border: 1px solid var(--border); border-radius: 3px; background: var(--bg); margin-right: 4px; }
+
+        /* Footer */
+        .footer { padding: 48px 32px; text-align: center; font-size: 12px; color: var(--text-muted); }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-top-row">
+                <div class="sidebar-logo">
+                    <img src="/docs/icon.png?v=2" alt="Dottie">
+                    <span class="name">Dottie</span>
+                    <span class="api">Analytics</span>
+                </div>
+                <button class="theme-btn" onclick="toggleTheme()" title="Toggle dark mode" id="theme-btn">
+                    <svg id="theme-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                    <svg id="theme-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                </button>
+            </div>
+        </div>
+        <div class="sidebar-search">
+            <button class="sidebar-search-btn" onclick="openSearch()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                Find anything
+                <kbd>/</kbd>
+            </button>
+        </div>
+        <nav class="sidebar-nav" id="sidebar-nav"></nav>
+    </aside>
+
+    <!-- Main -->
+    <div class="main">
+        <div class="topbar">
+            <div class="topbar-title" id="topbar-title">Introduction</div>
+            <div class="topbar-right">
+                <a href="/docs/llms.txt" target="_blank" class="llms-link">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="10" x="3" y="11" rx="2"/><circle cx="7.5" cy="15.5" r="1"/><circle cx="16.5" cy="15.5" r="1"/><path d="M8 11V9a4 4 0 0 1 8 0v2"/><path d="M12 4v3"/><path d="M2 15h2"/><path d="M20 15h2"/></svg>
+                    llms.txt
+                </a>
+                <div class="version-badge">
+                    v0.118.0
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+                <div class="lang-toggle">
+                    <button class="lang-btn active" onclick="setLang('javascript')">JavaScript</button>
+                    <button class="lang-btn" onclick="setLang('curl')">curl</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="content" id="content">
+            <!-- Introduction -->
+            <div class="intro" id="introduction">
+                <p>The Dottie Analytics API is a first-party telemetry and web-analytics service (an Umami replacement) at this server's origin (the host serving this page). It ingests desktop app pings and product events, serves the admin reports behind the dashboard, hosts multi-tenant website analytics, and tracks GitHub growth.</p>
+                <p>The service is deliberately invisible to the public web: the root <code>/</code> returns 404, bots are disallowed, and every response carries <code>X-Robots-Tag: noindex, nofollow, noarchive</code>. Report and admin endpoints require <code>Authorization: Bearer &lt;DOTTIE_ADMIN_KEY&gt;</code>; a missing or wrong key returns <strong>404</strong> (not 401/403) so endpoints look nonexistent to probes.</p>
+                <p>Public ingest is separate: <code>POST /api/send</code> (web analytics) is keyed by each site's <code>write_key</code> in the body, and desktop writes use the per-user bearer from <code>/api/register</code>. REST bodies cap at 4&nbsp;KiB. For a machine-readable index, see <a href="/docs/llms.txt" style="color:var(--accent)">llms.txt</a>.</p>
+                <div style="border-top: 1px solid var(--border); margin-top: 24px; padding-top: 20px;">
+                    <strong style="font-size: 14px;">Related</strong>
+                    <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 4px;">
+                        <a href="javascript:navTo('authentication')" style="font-size: 14px; color: var(--accent); text-decoration: none;">→ Authentication</a>
+                        <a href="javascript:navTo('collect')" style="font-size: 14px; color: var(--accent); text-decoration: none;">→ Web Analytics Ingest</a>
+                        <a href="javascript:navTo('feedback')" style="font-size: 14px; color: var(--accent); text-decoration: none;">→ Feedback</a>
+                        <a href="javascript:navTo('stats')" style="font-size: 14px; color: var(--accent); text-decoration: none;">→ Overview Stats</a>
+                        <a href="javascript:navTo('series')" style="font-size: 14px; color: var(--accent); text-decoration: none;">→ Report Series</a>
+                        <a href="javascript:navTo('sites')" style="font-size: 14px; color: var(--accent); text-decoration: none;">→ Multi-tenant Sites</a>
+                        <a href="javascript:navTo('downloads')" style="font-size: 14px; color: var(--accent); text-decoration: none;">→ Growth</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search Modal -->
+<div class="search-overlay" id="search-overlay" onclick="closeSearch()">
+    <div class="search-modal" onclick="event.stopPropagation()">
+        <div class="search-input-wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input class="search-input" id="search-input" type="text" placeholder="Search..." oninput="onSearch(this.value)" onkeydown="onSearchKey(event)">
+        </div>
+        <div class="search-results" id="search-results"></div>
+        <div class="search-footer">
+            <span><kbd>&uarr;</kbd><kbd>&darr;</kbd> Navigate</span>
+            <span><kbd>&crarr;</kbd> Go</span>
+            <span><kbd>esc</kbd> Close</span>
+        </div>
+    </div>
+</div>
+
+<script>
+const BASE = window.location.origin;
+const TOKEN = '$DOTTIE_ADMIN_KEY';
+let currentLang = 'javascript';
+
+// ── Endpoint data ────────────────────────────────────────────────────────
+
+const SECTIONS = [
+  { id: 'authentication', title: 'Authentication', desc: 'Report and admin endpoints require an admin bearer token: Authorization: Bearer <DOTTIE_ADMIN_KEY>. A missing or wrong key returns 404 (not 401/403) — endpoints look nonexistent to probes. Public ingest is keyed differently: web-analytics writes carry the site write_key in the body, and desktop writes use the per-user bearer from /api/register. Comparisons are timing-safe; every response is marked noindex.', endpoints: [] },
+
+  // ── Core / ingest ────────────────────────────────────────────────────────
+
+  { id: 'health', title: 'Health & Version', desc: 'Public, unauthenticated status and the desktop client-version policy. The public root / is intentionally a 404 and /robots.txt disallows all.', endpoints: [
+    { m: 'GET', p: '/health', d: 'Static health check. The only always-public status endpoint.', noAuth: true, res: { status: 'ok' } },
+    { m: 'GET', p: '/api/version', d: 'Client-version policy for the desktop app (public, 60/min).', noAuth: true, res: { latest: '7.99', minimum_required: '7.99', download_url: 'https://github.com/acme/app-releases/releases/latest/download/Dottie.zip' } },
+    { m: 'GET', p: '/robots.txt', d: 'Disallow-all robots file (text/plain).', noAuth: true, res: 'User-agent: *\nDisallow: /' }
+  ]},
+
+  { id: 'register', title: 'Register', desc: 'Unauthenticated bootstrap (the client has no token yet), guarded only by rate limit (10/min) and the Cloudflare UA filter. Upserts a user by email and returns a per-user bearer token used for /api/ping. Re-registering an existing email keeps the original token (never rotated).', endpoints: [
+    { m: 'POST', p: '/api/register', d: 'Upsert a user by email and return their per-user bearer token. Validates name → email → install_id; a rejection returns a generic error while logging the specific reason. Server also reads cf-ipcountry / cf-connecting-ip / user-agent headers.', noAuth: true,
+      params: [
+        ['name', 'string', 'required — user display name.'],
+        ['email', 'string', 'required — unique key; conflict keeps the existing token.'],
+        ['install_id', 'string', 'required — non-empty per-install id.'],
+        ['version', 'string', 'optional — app version at signup.'],
+        ['os_version', 'string', 'optional — OS version string.'],
+        ['iid', 'string', 'optional — landing-attribution id (≤100 chars).']
+      ],
+      body: { name: 'Alex', email: 'alex@example.com', install_id: 'inst_abc', version: '7.99' },
+      res: { ok: true, token: '4f3c…64-char-hex' } }
+  ]},
+
+  { id: 'ingest', title: 'Desktop Ingest', desc: 'Writes from the desktop app, authenticated with the per-user bearer from /api/register (the shared X-Dottie-Client key is retired). Wrong/missing key → 404. Covers install pings (DAU/MAU), single and batched product events, and redacted diagnostic bundles.', endpoints: [
+    { m: 'POST', p: '/api/ping', d: 'App-launch ping for DAU/MAU (60/min). Requires a user bearer.', noAuth: true,
+      params: [['install_id', 'string', 'required — non-empty install id.'], ['version', 'string', 'optional — app version.']],
+      body: { install_id: 'inst_abc', version: '7.99' }, res: { ok: true } },
+    { m: 'POST', p: '/api/events', d: 'Single product-event ingest (120/min). Pass event_id to enable dedupe.', noAuth: true,
+      params: [
+        ['install_id', 'string', 'required — non-empty install id.'],
+        ['name', 'string', 'required — event name (≤100 chars).'],
+        ['url', 'string', 'optional — path/url (clamped 500).'],
+        ['props', 'object', 'optional — arbitrary event properties.'],
+        ['version', 'string', 'optional — app version.'],
+        ['event_id', 'string', 'optional — idempotency key (≤64).']
+      ],
+      body: { install_id: 'inst_abc', name: 'message.sent', props: { model: 'grok' } }, res: { ok: true } },
+    { m: 'POST', p: '/api/events/batch', d: 'Batch ingest (30/min, 256 KiB cap, gzip ok, max 100). Invalid items are silently dropped. Accepts { events: [...] } or a bare array.', noAuth: true,
+      body: { events: [{ install_id: 'inst_abc', name: 'app.launched' }] }, res: { ok: true, accepted: 1, received: 1 } },
+    { m: 'POST', p: '/api/diagnostics', d: 'Redacted diagnostic bundle (5/min).', noAuth: true,
+      params: [
+        ['install_id', 'string', 'required — non-empty install id.'],
+        ['version', 'string', 'optional — app version.'],
+        ['fingerprint', 'object', 'optional — machine fingerprint.'],
+        ['logs', 'object', 'optional — redacted log payload.'],
+        ['gateway', 'object', 'optional — gateway state.'],
+        ['note', 'string', 'optional — free text (clamped 500).']
+      ],
+      body: { install_id: 'inst_abc', note: 'crash on launch' }, res: { ok: true } }
+  ]},
+
+  { id: 'collect', title: 'Web Analytics Ingest', desc: 'Public, cookieless first-party web analytics (an Umami replacement). Sites embed the tracker via &lt;script src="' + BASE + '/script.js" data-website-id="&lt;write_key&gt;"&gt;. The tracker posts Umami-shaped payloads to /api/send; the server enriches country/browser/os/device and derives a cookieless distinct_id + session_id. The write_key in payload.website identifies the site — unknown → 404. CORS is reflected per site origin in-handler.', endpoints: [
+    { m: 'GET', p: '/script.js', d: 'The Umami-compatible tracker JS sites embed (public, cached 1h). Honors data-domains and bails on localhost.', noAuth: true, res: 'text/javascript tracker source' },
+    { m: 'POST', p: '/api/send', d: 'Live web-analytics ingest (240/min). payload.website is the site write_key (required; unknown → 404). Returns 204 on success (bot UAs also get 204; they are stored flagged bot=1 and left out of reports). /api/collect is an alias.', noAuth: true,
+      params: [
+        ['type', 'string', 'required — "pageview" or "event".'],
+        ['payload.website', 'string', 'required — site write_key (≤100).'],
+        ['payload.url', 'string', 'optional — page path/url (clamped 500); UTM parsed server-side.'],
+        ['payload.referrer', 'string', 'optional — referrer (clamped 500).'],
+        ['payload.hostname', 'string', 'optional — host (clamped 200).'],
+        ['payload.name', 'string', 'optional — event name (clamped 200; events only).'],
+        ['payload.data', 'object', 'optional — custom event props.']
+      ],
+      body: { type: 'event', payload: { website: 'wk_…', name: 'signup_click', url: '/pricing', data: { plan: 'pro' } } },
+      res: '204 No Content' }
+  ]},
+
+  { id: 'feedback', title: 'Feedback', desc: 'In-app feedback widget (absorbed from feedback-assistant). Sites embed it via &lt;script defer src="' + BASE + '/feedback.js" data-website-id="&lt;write_key&gt;"&gt; (same write_key as the tracker). The widget posts multipart/form-data (no preflight) with an optional JPEG/PNG screenshot. Message ≤5000 UTF-16 chars and screenshot ≤2 MiB, else 413; other image types 415; 20/min per IP; per-site budget FEEDBACK_DAILY_BUDGET (default 1000) per rolling 24h → 429. Unknown write_key → 404. Admin reads take the admin or read key; status changes need the admin key.', endpoints: [
+    { m: 'GET', p: '/feedback.js', d: 'The widget (public, cached 5 min). Exposes DottieFeedback.init / identify({ id, name, email }) / show(). html2canvas lazy-loads from /feedback/html2canvas-v1.js on first screenshot.', noAuth: true, res: 'text/javascript widget source' },
+    { m: 'POST', p: '/api/feedback', d: 'Submit feedback. multipart/form-data (fields below + optional file part) or JSON (no screenshot). CORS reflects the caller origin.', noAuth: true,
+      params: [
+        ['website', 'string', 'required — site write_key.'],
+        ['message', 'string', 'required — ≤5000 UTF-16 chars (413 over).'],
+        ['url', 'string', 'optional — page URL (clamped 2000).'],
+        ['appVersion', 'string', 'optional — (clamped 64).'],
+        ['endUserId / endUserName / endUserEmail', 'string', 'optional — from DottieFeedback.identify.'],
+        ['file', 'file', 'optional, multipart only — image/jpeg or image/png, ≤2 MiB.']
+      ],
+      body: { website: 'wk_…', message: 'The export button does nothing', url: 'https://example.com/cart' },
+      res: { ok: true, id: 42 } },
+    { m: 'GET', p: '/api/stats/feedback', d: 'Newest first, without screenshot bytes. ?site= ?status=new|read|archived ?days=|from=&to=|hours=|all=1 (default 30d) ?limit= (default 200, max 1000). counts ignore the status filter.',
+      res: { rows: [{ id: 42, site_id: '00000000-…', site_name: 'Shop', message: 'The export button does nothing', status: 'new', created_at: 1760000000000, has_screenshot: true, screenshot_bytes: 183422 }], counts: { total: 1, new: 1, read: 0, archived: 0 } } },
+    { m: 'GET', p: '/api/feedback/:id/screenshot', d: 'The stored screenshot (image/jpeg or image/png).', res: 'image bytes' },
+    { m: 'PATCH', p: '/api/feedback/:id', d: 'Set triage status (admin key only). POST is an alias for Cloudflare.', body: { status: 'archived' }, res: { id: 42, status: 'archived' } }
+  ]},
+
+  { id: 'stats', title: 'Overview Stats', desc: 'Top-line desktop metrics for the dashboard header: user totals, DAU/WAU/MAU (raw + engaged), stickiness, 24h pings/events, top events, and country breakdowns. Admin bearer required.', endpoints: [
+    { m: 'GET', p: '/api/stats', d: 'All top-line metrics in one call. Counts are all-time / rolling 24h as noted per field (the dashboard uses the range-scoped report endpoints for windowed KPIs).',
+      res: { users: 1240, dau: 210, wau: 640, mau: 980, dau_engaged: 180, stickiness: 0.21, pings_24h: 305, events_24h: 4200, top_events_24h: [{ name: 'message.sent', count: 900 }], countries: [{ country: 'US', count: 540 }] } }
+  ]},
+
+  // ── Reports ────────────────────────────────────────────────────────────────
+
+  { id: 'daily-reports', title: 'Daily Reports', desc: 'One-call composites for cron / automation. Add ?format=md (or text) for a ready-to-send markdown body; default is JSON. Admin bearer required. These bundle the desktop runbook and the all-sites roll-up.', parent: 'reports', endpoints: [
+    { m: 'GET', p: '/api/report/daily', d: 'Desktop daily runbook: stats + 24h errors + error signatures (code/reason) + 7-day active + activation, plus a linked native repo growth block when present. ?format=md renders markdown.',
+      params: [['format', 'string', 'optional — "md" or "text" for a markdown body.']],
+      res: { window_hours: 24, stats: {}, errors_24h: { total: 12, top: [] }, active_7d: { days: [] }, activation_24h: {} } },
+    { m: 'GET', p: '/api/report/site-daily', d: 'Multi-tenant 24h roll-up across all sites (totals + per-site KPIs, growth when linked). ?format=md renders a markdown table.',
+      params: [['format', 'string', 'optional — "md" or "text".']],
+      res: { window_hours: 24, totals: { sites: 34, visitors: 820, visits: 990, views: 2100, events: 640 }, sites: [{ id: '00000000-…', name: 'Example Landing', domain: 'example.com', visitors: 8, views: 8, events: 6 }] } }
+  ]},
+
+  { id: 'series', title: 'Series & Active', desc: 'Time-bucketed volume for charts and the range-scoped KPIs. Every report endpoint shares one range resolution: all=1 (everything) → from=&to= (calendar YYYY-MM-DD, inclusive end, ≤366d) → days=N (rolling, 1–180, default 30) → hours=N (rolling, 1–8760). /api/stats/series additionally routes a present hours param to hourly buckets. Admin bearer required.', parent: 'reports', endpoints: [
+    { m: 'GET', p: '/api/stats/series', d: 'Per-day (or per-hour) volume for one metric. metric is required.',
+      params: [
+        ['metric', 'string', 'required — one of dau | events | errors | signups | pings (else 400 bad_metric).'],
+        ['days', 'number', 'optional — rolling window (1–180, default 30).'],
+        ['hours', 'number', 'optional — when present, returns hourly buckets over the last N hours.'],
+        ['from', 'string', 'optional — YYYY-MM-DD start (with to).'],
+        ['to', 'string', 'optional — YYYY-MM-DD end (inclusive).'],
+        ['all', 'string', 'optional — "1" or "true" for since-inception.']
+      ],
+      res: { metric: 'dau', series: [{ date: '2026-07-14', count: 205 }, { date: '2026-07-15', count: 210 }] } },
+    { m: 'GET', p: '/api/stats/active', d: 'Daily-active sparkline (raw + engaged), newest-first.',
+      params: [['days', 'number', 'optional — 1–180, default 30.']],
+      res: { days: [{ date: '2026-07-15', dau: 210, dau_engaged: 180 }] } },
+    { m: 'GET', p: '/api/stats/active-users', d: 'Distinct active installs over the window (default 24h).',
+      params: [['days | hours | from&to | all', 'range', 'optional — shared range params (default 24h).']],
+      res: { active_users: 210 } },
+    { m: 'GET', p: '/api/stats/top-events', d: 'Top 20 event names for the window (default 24h).',
+      params: [['days | hours | from&to | all', 'range', 'optional — default 24h.']],
+      res: { rows: [{ name: 'message.sent', count: 900 }] } }
+  ]},
+
+  { id: 'cohorts', title: 'Retention & Funnels', desc: 'Cohort retention, activation, conversion funnels, weekly lifecycle, and acquisition attribution. All admin bearer, all accept the shared range params (with per-endpoint defaults).', parent: 'reports', endpoints: [
+    { m: 'GET', p: '/api/stats/retention', d: 'Weekly cohort retention matrix (d1/d7/d30 rates).',
+      params: [['weeks', 'number', 'optional — legacy cohort count (1–26, default 8); or use range params.']],
+      res: { generated_at: 1784000000000, cohorts: [{ week: '2026-07-06', size: 120, engaged: 90, d1: { rate: 0.42, returned: 50, of: 120 }, d7: { rate: 0.3 }, d30: { rate: 0.18 } }] } },
+    { m: 'GET', p: '/api/stats/activation', d: 'Activation funnel by signup time (per-user activated flag + time-to-activation).',
+      params: [['hours', 'number', 'optional — default 24 (1–720); or range params.']],
+      res: { total: 40, activated: 26, activation_rate: 0.65, window_hours: 24, users: [{ email: 'alex@example.com', activated: true, time_to_activation_ms: 42000, session_count: 3 }] } },
+    { m: 'GET', p: '/api/stats/funnel', d: 'Per-step funnel.* conversion (installs per step).',
+      params: [['hours', 'number', 'optional — default 24 (1–720); or range params.']],
+      res: { window_hours: 24, steps: [{ name: 'onboard.start', installs: 200 }, { name: 'onboard.done', installs: 140 }] } },
+    { m: 'GET', p: '/api/stats/lifecycle', d: 'Weekly new / returning / resurrecting / dormant counts.',
+      params: [['weeks', 'number', 'optional — 1–52, default 12.']],
+      res: { weeks: [{ week: '2026-07-06', new: 60, returning: 210, resurrecting: 18, dormant: 40 }] } },
+    { m: 'GET', p: '/api/stats/attribution', d: 'Signups grouped by landing UTM (unmapped → source "direct").',
+      params: [['hours', 'number', 'optional — default 720 (1–8760); or range params.']],
+      res: { window_hours: 720, total: 320, rows: [{ source: 'x', medium: 'social', campaign: 'launch', signups: 44 }] } }
+  ]},
+
+  { id: 'errors', title: 'Errors & Crashes', desc: 'Error hotspots, crash grouping, regressions, and raw event drill-down. Admin bearer required. Error rows preserve native TEXT/INT types and may be null.', parent: 'reports', endpoints: [
+    { m: 'GET', p: '/api/stats/errors', d: 'error.thrown hotspots grouped by file/function/line.',
+      params: [['hours', 'number', 'optional — default 24 (1–720).']],
+      res: { total: 42, window_hours: 24, top: [{ file: 'app.rs', function: 'send', line: 210, count: 9 }] } },
+    { m: 'GET', p: '/api/stats/errors-by-version', d: 'error.* counts grouped by version + name.',
+      params: [['hours', 'number', 'optional — default 168 (1–2160).']],
+      res: { window_hours: 168, rows: [{ version: '7.99', name: 'error.thrown', count: 12, installs: 8 }] } },
+    { m: 'GET', p: '/api/stats/error-signatures', d: 'Individual error failure modes: version + name + code/reason/provider (or file/function/line). Splits mega-names like error.realtime_server_error into llm_error vs mint failures.',
+      params: [['hours', 'number', 'optional — default 168 (1–720).']],
+      res: { total: 120, window_hours: 168, rows: [{ version: '2026.8.5.2', name: 'error.realtime_server_error', code: 'llm_error', reason: 'all_providers_failed', provider: 'xai', detail: 'llm_error · all_providers_failed · provider=xai', count: 40, installs: 2 }] } },
+    { m: 'GET', p: '/api/stats/crashes', d: 'Crash + hang grouping by version/signal/top-frame.',
+      params: [['hours', 'number', 'optional — default 168 (1–2160).']],
+      res: { window_hours: 168, rows: [{ version: '7.99', signal: 'SIGSEGV', top_frame: 'render', count: 3, installs: 2 }] } },
+    { m: 'GET', p: '/api/stats/new-errors', d: 'error.* signatures new in the last 24h vs the prior week.',
+      res: { rows: [{ name: 'error.thrown', file: 'app.rs', line: 88, count: 5, installs: 4 }] } },
+    { m: 'GET', p: '/api/stats/event-details', d: 'Raw props drill-down for one exact event name (newest first). name is required.',
+      params: [
+        ['name', 'string', 'required — exact event name (else 400 name_required).'],
+        ['hours', 'number', 'optional — default 720 (1–2160).'],
+        ['limit', 'number', 'optional — default 50 (1–200).']
+      ],
+      res: { name: 'error.thrown', window_hours: 720, rows: [{ install_id: 'inst_abc', version: '7.99', at: '2026-07-15 18:02:04', props: { message: 'boom' } }] } }
+  ]},
+
+  { id: 'issues', title: 'Issues', desc: 'Grouped error issues with a resolve/reopen workflow. Admin bearer required. A POST alias mirrors PATCH because Cloudflare\'s WAF challenges PATCH from non-browser clients.', parent: 'reports', endpoints: [
+    { m: 'GET', p: '/api/stats/issues', d: 'Issue list (top 200, newest activity first).',
+      params: [['status', 'string', 'optional — filter active | resolved | regressed.']],
+      res: { rows: [{ id: 12, fingerprint: 'ab12', name: 'error.thrown', file: 'app.rs', line: 210, status: 'active', count: 42, first_seen: 1783900000000, last_seen: 1784138524649, resolved_at: null }] } },
+    { m: 'PATCH', p: '/api/issues/{id}', d: 'Set an issue status. Body { status: "active" | "resolved" }. POST /api/issues/{id} is an identical alias for Cloudflare. Unknown id → 404.',
+      body: { status: 'resolved' },
+      res: { id: 12, name: 'error.thrown', status: 'resolved', count: 42 } }
+  ]},
+
+  { id: 'users', title: 'Users & Breakdown', desc: 'The full user list and cohort breakdowns by a single dimension. Admin bearer required.', parent: 'reports', endpoints: [
+    { m: 'GET', p: '/api/stats/users', d: 'Full user list with activity counts.',
+      params: [['limit', 'number', 'optional — default 200 (1–1000).']],
+      res: { total: 1240, rows: [{ name: 'Alex', email: 'alex@example.com', version: '7.99', os: 'macOS 15', country: 'US', signed_up_at: '2026-06-01T10:00:00Z', last_seen: '2026-07-15T18:00:00Z', msgs: 320, voice: 12, active_days: 22 }] } },
+    { m: 'GET', p: '/api/stats/breakdown', d: 'User + engaged counts grouped by one dimension.',
+      params: [['by', 'string', 'optional — version | os | country (default version; else 400 invalid_by).']],
+      res: { by: 'version', rows: [{ bucket: '7.99', users: 800, engaged: 610 }] } }
+  ]},
+
+  { id: 'landing', title: 'Landing Mirror', desc: 'The product landing-page analytics mirror. Report reads are admin bearer; the /api/landing-event and /api/landing-visit ingest routes are public but origin-locked to LANDING_ALLOWED_ORIGIN (unset or mismatch → 403). Admin purge of one visitor exists for GDPR.', parent: 'reports', endpoints: [
+    { m: 'GET', p: '/api/stats/landing-events', d: 'Named landing events grouped by name (admin bearer).',
+      params: [['hours', 'number', 'optional — default 720 (1–8760).']],
+      res: { window_hours: 720, total: 5200, rows: [{ name: 'download_click', count: 900, visitors: 720 }] } },
+    { m: 'GET', p: '/api/stats/landing-funnel', d: 'Acquisition funnel visited → downloaded → installed → signed_up (distinct iid).',
+      params: [['hours', 'number', 'optional — default 720 (1–8760).']],
+      res: { window_hours: 720, steps: [{ step: 'visited', count: 8000 }, { step: 'downloaded', count: 2100 }, { step: 'installed', count: 1400 }, { step: 'signed_up', count: 900 }] } },
+    { m: 'POST', p: '/api/landing-event', d: 'Named landing-event ingest (public, origin-locked to LANDING_ALLOWED_ORIGIN, 120/min).', noAuth: true,
+      params: [['iid', 'string', 'required — visitor id (≤100).'], ['name', 'string', 'required — event name (≤100).'], ['props', 'object', 'optional.'], ['path', 'string', 'optional — clamped 200.']],
+      body: { iid: 'v_abc', name: 'download_click', path: '/' }, res: { ok: true } },
+    { m: 'DELETE', p: '/api/landing/{iid}', d: 'Admin purge of one visitor\'s landing data (events + visit). POST alias for Cloudflare.',
+      res: { ok: true, iid: 'v_abc', events_deleted: 12, visits_deleted: 1 } }
+  ]},
+
+  { id: 'diagnostics', title: 'Diagnostics', desc: 'Read the redacted diagnostic bundles submitted by the desktop app (see Desktop Ingest for the write path). Admin bearer required.', parent: 'reports', endpoints: [
+    { m: 'GET', p: '/api/diagnostics/list', d: 'Recent diagnostic submissions.',
+      params: [['limit', 'number', 'optional — default 50 (1–500).']],
+      res: { rows: [{ id: 4, install_id: 'inst_abc', version: '7.99', created_at: 1784138524649, note: 'crash on launch', fingerprint: {} }] } },
+    { m: 'GET', p: '/api/diagnostics/{id}', d: 'A single diagnostic with full logs/gateway/fingerprint. Unknown id → 404.',
+      res: { id: 4, install_id: 'inst_abc', version: '7.99', created_at: 1784138524649, note: 'crash on launch', fingerprint: {}, logs: {}, gateway: {} } }
+  ]},
+
+  // ── Sites (multi-tenant) ────────────────────────────────────────────────────
+
+  { id: 'sites', title: 'Sites', desc: 'Multi-tenant website analytics — each property is keyed by its own write_key. This is the Umami-replacement surface: create properties, list them for the dashboard site-switcher, and link a GitHub repo for growth. Admin bearer required. Site reads share the standard range params (default 720h).', parent: 'sites', endpoints: [
+    { m: 'GET', p: '/api/sites', d: 'All sites with lifetime counts (site-switcher source). Includes repo + growth brief when linked.',
+      res: { sites: [{ id: '00000000-…', name: 'Example Landing', domain: 'example.com', write_key: 'wk_…', events: 26700, visitors: 8100, last_event: 1784138524649 }] } },
+    { m: 'POST', p: '/api/sites', d: 'Create a web-analytics property. Returns 201 with the new write_key. Optionally link a GitHub repo for growth.',
+      params: [
+        ['name', 'string', 'required — display name (else 400 name_required).'],
+        ['domain', 'string', 'optional — primary host.'],
+        ['id', 'string', 'optional — fixed id (else random 16-byte hex).'],
+        ['github_repo', 'string', 'optional — "owner/name" to link growth.']
+      ],
+      body: { name: 'My Site', domain: 'mysite.com' },
+      res: { id: 'a1b2…', name: 'My Site', domain: 'mysite.com', write_key: 'd4e5…', created_at: 1784138524649, events: 0, visitors: 0, last_event: null } }
+  ]},
+
+  { id: 'site-reports', title: 'Site Reports', desc: 'Per-site KPIs and breakdowns (Umami-style). Every endpoint takes site (the site id, required) plus the shared range params. Admin bearer required.', parent: 'sites', endpoints: [
+    { m: 'GET', p: '/api/site/summary', d: 'Range KPIs for one site plus the previous period (for deltas). bounce_rate ∈ [0,1].',
+      params: [['site', 'string', 'required — site id (else 400 missing_site).'], ['days | hours | from&to | all', 'range', 'optional — default 720h.']],
+      res: { visitors: 8, visits: 9, views: 8, bounce_rate: 0.89, visit_duration_ms: 38000, events: 6, prev: { visitors: 0, views: 0 } } },
+    { m: 'GET', p: '/api/site/series', d: 'Per-day series for one site metric (ascending, zero-filled).',
+      params: [['site', 'string', 'required.'], ['metric', 'string', 'optional — pageviews | events | visitors | visits (default pageviews; else 400 bad_metric).'], ['days | hours | from&to | all', 'range', 'optional.']],
+      res: { metric: 'pageviews', series: [{ date: '2026-07-15', count: 8 }] } },
+    { m: 'GET', p: '/api/site/events', d: 'Custom-event breakdown (top 100).',
+      params: [['site', 'string', 'required.'], ['hours', 'number', 'optional — default 720 (1–8760).']],
+      res: { window_hours: 720, total: 640, rows: [{ name: 'signup_click', count: 120, visitors: 96 }] } },
+    { m: 'GET', p: '/api/site/pages', d: 'Top pages (top 50).',
+      params: [['site', 'string', 'required.'], ['kind', 'string', 'optional — path | url | entry | exit (default path; else 400 bad_kind).'], ['days | hours | from&to | all', 'range', 'optional.']],
+      res: { kind: 'path', rows: [{ url: '/pricing', views: 320, visitors: 240 }] } },
+    { m: 'GET', p: '/api/site/referrers', d: 'Top referrers (top 50).',
+      params: [['site', 'string', 'required.'], ['days | hours | from&to | all', 'range', 'optional.']],
+      res: { rows: [{ referrer: 'google.com', visitors: 180, hits: 240 }] } },
+    { m: 'GET', p: '/api/site/breakdown', d: 'Dimension breakdown (top 50).',
+      params: [['site', 'string', 'required.'], ['by', 'string', 'optional — browser | os | device | country (default browser; else 400 bad_by).'], ['days | hours | from&to | all', 'range', 'optional.']],
+      res: { by: 'browser', rows: [{ name: 'Safari', visitors: 300, hits: 520 }] } }
+  ]},
+
+  { id: 'site-import', title: 'Import Site Events', desc: 'Bulk historical backfill for a site (e.g. migrating from Umami). Admin bearer; 300/min, 8 MiB body, gzip ok, max 2000 events per call. Upserts the site then inserts events preserving each created_at.', parent: 'sites', endpoints: [
+    { m: 'POST', p: '/api/import/site-events', d: 'Insert historical events for a site, preserving timestamps.',
+      body: { site: { id: 'a1b2', name: 'My Site', domain: 'mysite.com' }, events: [{ type: 2, name: 'pageview', url: '/', created_at: 1783900000000 }] },
+      res: { ok: true, imported: 1 } }
+  ]},
+
+  // ── Growth ──────────────────────────────────────────────────────────────────
+
+  { id: 'downloads', title: 'Downloads', desc: 'GitHub release-download tracking. Startup + hourly collectors snapshot per-tag totals; these endpoints read raw snapshots, day-over-day deltas, and let you trigger snapshots or backfill historical totals. Admin bearer required.', parent: 'growth', endpoints: [
+    { m: 'GET', p: '/api/downloads', d: 'Raw download snapshots.',
+      params: [['repo', 'string', 'optional — owner/name filter.'], ['from', 'string', 'optional.'], ['to', 'string', 'optional.']],
+      res: { rows: [{ repo: 'acme/app-releases', tag: 'v7.99', count: 1200, at: 1784138524649 }] } },
+    { m: 'GET', p: '/api/downloads/daily', d: 'Day-over-day download deltas.',
+      params: [['repo', 'string', 'optional.']], res: { rows: [{ date: '2026-07-15', delta: 42 }] } },
+    { m: 'GET', p: '/api/downloads/latest', d: 'Most recent snapshot + per-tag totals.',
+      params: [['repo', 'string', 'optional.']], res: { total: 5200, tags: [{ tag: 'v7.99', count: 1200 }] } },
+    { m: 'GET', p: '/api/downloads/wow', d: 'Rolling week-over-week download growth rate (%). Each point compares the total on date against the latest snapshot at-or-before date−7d; the first week of history has no baseline so it is omitted.',
+      params: [['repo', 'string', 'optional.']],
+      res: { repo: 'acme/app-releases', metric: 'downloads', latest: { date: '2026-07-26', value: 1812, prev_date: '2026-07-19', prev_value: 1644, rate: 10.22 }, points: [] } },
+    { m: 'GET', p: '/api/downloads/repos', d: 'Tracked repo names.',
+      params: [['kind', 'string', 'optional — normalized kind filter.']], res: { repos: ['acme/app-releases'] } },
+    { m: 'POST', p: '/api/downloads/snapshot', d: 'Trigger a snapshot (omit repo = all repos). Returns 201.',
+      body: { repo: 'acme/app-releases' }, res: { message: 'Snapshots completed for all repos', repos: [] } },
+    { m: 'POST', p: '/api/downloads/backfill', d: 'Insert a historical total for a date, distributed across tags. Returns 201.',
+      params: [['date', 'string', 'required — else 400 date_required.'], ['total', 'number', 'required — else 400 total_required.'], ['repo', 'string', 'optional — defaults to first tracked repo.']],
+      body: { date: '2026-06-01', total: 3000 }, res: { ok: true } }
+  ]},
+
+  { id: 'metrics', title: 'Metrics', desc: 'GitHub repo metrics over time: stars, forks, clones, views. Same snapshot/delta model as downloads. metric is required on reads. Admin bearer required.', parent: 'growth', endpoints: [
+    { m: 'GET', p: '/api/metrics', d: 'Metric snapshots.',
+      params: [['metric', 'string', 'required — stars | forks | clones | views (else 400 metric_required / invalid_metric).'], ['repo', 'string', 'optional.'], ['from', 'string', 'optional.'], ['to', 'string', 'optional.']],
+      res: { rows: [{ repo: 'acme/app', metric: 'stars', count: 420, at: 1784138524649 }] } },
+    { m: 'GET', p: '/api/metrics/daily', d: 'Day-over-day metric deltas.',
+      params: [['metric', 'string', 'required.'], ['repo', 'string', 'optional.']], res: { rows: [{ date: '2026-07-15', delta: 6 }] } },
+    { m: 'GET', p: '/api/metrics/latest', d: 'Latest metric snapshot.',
+      params: [['metric', 'string', 'required.'], ['repo', 'string', 'optional.']], res: { count: 420, at: 1784138524649 } },
+    { m: 'GET', p: '/api/metrics/wow', d: 'Rolling week-over-week growth rate (%) per snapshot date. metric also accepts downloads, so one URL shape covers every growth metric. clones/views are per-day traffic, so they are accumulated into a level before rating.',
+      params: [['metric', 'string', 'required — downloads | stars | forks | clones | views (else 400 metric_required / invalid_metric).'], ['repo', 'string', 'optional.']],
+      res: { repo: 'acme/app', metric: 'stars', latest: { date: '2026-07-26', value: 453, prev_date: '2026-07-19', prev_value: 411, rate: 10.22 }, points: [{ date: '2026-07-25', value: 447, prev_date: '2026-07-18', prev_value: 405, rate: 10.37 }] } },
+    { m: 'POST', p: '/api/metrics/snapshot', d: 'Trigger a metric snapshot (omit repo = all repos; omit metric = all metrics). Returns 201.',
+      body: { metric: 'stars' }, res: { message: 'Metric snapshots completed', repos: [], metrics: [] } }
+  ]},
+
+  { id: 'repos', title: 'Repos', desc: 'The tracked-repo registry. Add owner/name after GitHub validation, set a kind (website | repo | mac_app), and link a repo to a site (site uuid or "native") so its growth brief embeds on site summaries and reports. Admin bearer required. POST aliases mirror PATCH/DELETE for Cloudflare.', parent: 'growth', endpoints: [
+    { m: 'GET', p: '/api/repos', d: 'Full repo rows.',
+      params: [['kind', 'string', 'optional — normalized kind filter.']],
+      res: { rows: [{ id: 1, repo: 'acme/app', kind: 'repo', linked_site_id: 'native' }] } },
+    { m: 'POST', p: '/api/repos', d: 'Add a repo after GitHub validation. 201 on success; 409 if it exists; 400 invalid; 502 upstream.',
+      params: [['repo', 'string', 'required — "owner/name" (else 400 repo_required).'], ['kind', 'string', 'optional.']],
+      body: { repo: 'acme/app', kind: 'repo' }, res: { id: 1, repo: 'acme/app', kind: 'repo' } },
+    { m: 'PATCH', p: '/api/repos/{id}', d: 'Update kind and/or the linked site. linked_site_id accepts a site uuid, "native", or null/"" to clear. POST alias for Cloudflare.',
+      body: { kind: 'mac_app', linked_site_id: 'native' }, res: { id: 1, repo: 'acme/app', kind: 'mac_app', linked_site_id: 'native' } },
+    { m: 'DELETE', p: '/api/repos/{id}', d: 'Remove a repo. Unknown id → 404.',
+      res: { message: 'Repo removed', repo: {} } }
+  ]},
+
+  { id: 'growth-import', title: 'Import Growth', desc: 'Bulk load downloads + metrics from a growth-chart export. Admin bearer; 30/min, 8 MiB body, max 10,000 rows total across both arrays.', parent: 'growth', endpoints: [
+    { m: 'POST', p: '/api/import/github-growth', d: 'Import historical downloads and/or metrics. At least one non-empty array required (else 400 empty_import).',
+      body: { downloads: [{ repo: 'acme/app', tag: 'v1', count: 100, at: 1783900000000 }], metrics: [{ repo: 'acme/app', metric: 'stars', count: 50, at: 1783900000000 }] },
+      res: { ok: true, downloads_imported: 1, metrics_imported: 1 } }
+  ]}
+];
+
+// ── Code generation ──────────────────────────────────────────────────────
+
+function genCurl(ep) {
+    const lines = [`curl ${BASE}${ep.p}`];
+    if (ep.m !== 'GET') lines.push(`  -X ${ep.m}`);
+    if (!ep.noAuth) lines.push(`  -H "Authorization: Bearer ${TOKEN}"`);
+    if (ep.body) {
+        lines.push('  -H "Content-Type: application/json"');
+        lines.push(`  -d '${JSON.stringify(ep.body, null, 2)}'`);
+    }
+    return lines.join(' \\\n');
+}
+
+function genFetch(ep) {
+    const hasOpts = ep.m !== 'GET' || !ep.noAuth || ep.body;
+    let c = `const res = await fetch('${BASE}${ep.p}'`;
+    if (hasOpts) {
+        c += ', {\n';
+        if (ep.m !== 'GET') c += `  method: '${ep.m}',\n`;
+        const h = {};
+        if (!ep.noAuth) h['Authorization'] = `Bearer ${TOKEN}`;
+        if (ep.body) h['Content-Type'] = 'application/json';
+        if (Object.keys(h).length) {
+            c += '  headers: {\n';
+            for (const [k, v] of Object.entries(h)) c += `    '${k}': '${v}',\n`;
+            c += '  },\n';
+        }
+        if (ep.body) c += `  body: JSON.stringify(${JSON.stringify(ep.body, null, 2).split('\n').map((l,i) => i ? '  '+l : l).join('\n')})\n`;
+        c += '}';
+    }
+    c += ');\n';
+    if (ep.sse) c += `\nconst reader = res.body.getReader();\nconst decoder = new TextDecoder();\nwhile (true) {\n  const { done, value } = await reader.read();\n  if (done) break;\n  console.log(decoder.decode(value));\n}`;
+    else c += 'const data = await res.json();';
+    return c;
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// ── Render ───────────────────────────────────────────────────────────────
+
+function render() {
+    const content = document.getElementById('content');
+    const nav = document.getElementById('sidebar-nav');
+
+    // Keep intro
+    const intro = content.querySelector('.intro');
+    content.innerHTML = '';
+    content.appendChild(intro);
+
+    // Nav icons (14x14 lucide-style SVGs)
+    const ico = (d) => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+    const NAV_ICONS = {
+        'introduction': ico('<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>'),
+        'authentication': ico('<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>'),
+        'health': ico('<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>'),
+        'register': ico('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>'),
+        'ingest': ico('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>'),
+        'collect': ico('<circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>'),
+        'stats': ico('<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>'),
+        'daily-reports': ico('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'),
+        'series': ico('<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>'),
+        'cohorts': ico('<path d="M21 12a9 9 0 1 1-6.219-8.56"/><path d="M21 3v5h-5"/>'),
+        'errors': ico('<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'),
+        'issues': ico('<polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'),
+        'users': ico('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+        'landing': ico('<path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/>'),
+        'diagnostics': ico('<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>'),
+        'sites': ico('<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>'),
+        'site-reports': ico('<path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/>'),
+        'site-import': ico('<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>'),
+        'downloads': ico('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>'),
+        'metrics': ico('<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>'),
+        'repos': ico('<line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>'),
+        'growth-import': ico('<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>'),
+    };
+    const navIcon = (id) => NAV_ICONS[id] || '';
+
+    // Nav + content
+    let navHTML = `<button class="nav-item" onclick="navTo('introduction')">${navIcon('introduction')}Introduction</button>`;
+    const groupArrow = (key) => `<svg id="group-arrow-${key}" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>`;
+    const GROUPS = [
+        ['core', 'Core API', s => !s.parent],
+        ['reports', 'Reports', s => s.parent === 'reports'],
+        ['sites', 'Sites', s => s.parent === 'sites'],
+        ['growth', 'Growth', s => s.parent === 'growth'],
+    ];
+    GROUPS.forEach(([key, label, pred]) => {
+        const items = SECTIONS.filter(pred);
+        if (!items.length) return;
+        navHTML += `<button class="nav-group-label" onclick="toggleGroup('${key}')">${groupArrow(key)} ${label}</button>`;
+        navHTML += `<div class="nav-children" id="nav-children-${key}">`;
+        items.forEach(s => { navHTML += `<button class="nav-item" onclick="navTo('${s.id}')">${navIcon(s.id)}${s.title}</button>`; });
+        navHTML += `</div>`;
+    });
+
+    nav.innerHTML = navHTML;
+
+    // Content sections
+    SECTIONS.forEach(s => {
+        let html = `<div class="section" id="${s.id}">`;
+        const badgeMap = { reports: 'Reports', sites: 'Sites', growth: 'Growth', pro: 'Pro' };
+        const badge = s.parent && badgeMap[s.parent] ? `<span class="badge">${badgeMap[s.parent]}</span>` : '';
+        html += `<div class="section-header"><h2>${s.title}${badge}</h2><p>${s.desc}</p></div>`;
+
+        // Auth special
+        if (s.id === 'authentication') {
+            html += `<div class="auth-grid">
+                <div class="auth-box"><code>Authorization: Bearer &lt;DOTTIE_ADMIN_KEY&gt;</code><p class="hint">Set once in the dashboard (localStorage → bearer). A wrong or missing key returns <code>404</code>, not 401/403. Public ingest uses the site <code>write_key</code> or the desktop user bearer instead.</p></div>
+                <div class="code-block"><div class="code-header"><span style="font-size:11px;color:#94a3b8;">Example</span></div><div class="code-body"><pre>curl ${BASE}/api/stats \\
+  -H "Authorization: Bearer ${TOKEN}"</pre></div></div>
+            </div>`;
+        }
+
+        // Endpoints
+        s.endpoints.forEach(ep => {
+            const mc = ep.m.toLowerCase();
+            const curl = esc(genCurl(ep));
+            const js = esc(genFetch(ep));
+
+            html += `<div class="endpoint"><div class="ep-row"><div class="ep-left">`;
+            html += `<div class="ep-path"><span class="method method-${mc}">${ep.m}</span><code>${ep.p}</code></div>`;
+            html += `<p class="ep-desc">${ep.d}</p>`;
+
+            // Params
+            if (ep.params) {
+                html += `<div class="params-label">Parameters</div><div class="params-table">`;
+                ep.params.forEach(([n,t,d]) => {
+                    html += `<div class="param-row"><span class="param-name">${n}</span><span class="param-type">${t}</span><span class="param-desc">${d}</span></div>`;
+                });
+                html += `</div>`;
+            }
+
+            // Body as parameter table (only if no detailed params provided)
+            if (ep.body && !ep.params) {
+                html += `<div class="params-label">Parameters</div><div class="params-table">`;
+                for (const [key, val] of Object.entries(ep.body)) {
+                    const type = Array.isArray(val) ? 'array' : typeof val;
+                    html += `<div class="param-row"><span class="param-name">${key}</span><span class="param-type">${type}</span><span class="param-desc"></span></div>`;
+                }
+                html += `</div>`;
+            }
+
+            html += `</div><div class="ep-right">`;
+
+            // Code example
+            if (ep.code) {
+                html += `<div class="code-block"><div class="code-header"><span style="font-size:11px;color:#94a3b8;">JavaScript</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>`;
+                html += `<div class="code-body"><pre>${esc(ep.code)}</pre></div></div>`;
+            } else {
+                html += `<div class="code-block"><div class="code-header"><div class="lang-tabs">`;
+                html += `<button class="lang-tab${currentLang==='javascript'?' active':''}" onclick="setLang('javascript')">JavaScript</button>`;
+                html += `<button class="lang-tab${currentLang==='curl'?' active':''}" onclick="setLang('curl')">curl</button>`;
+                html += `</div><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>`;
+                html += `<div class="code-body"><pre class="code-curl"${currentLang!=='curl'?' style="display:none"':''}>${curl}</pre>`;
+                html += `<pre class="code-js"${currentLang!=='javascript'?' style="display:none"':''}>${js}</pre></div></div>`;
+            }
+
+            // Response under code block — same dark style
+            if (ep.res) {
+                const resStr = typeof ep.res === 'string' ? ep.res : JSON.stringify(ep.res, null, 2);
+                html += `<div class="code-block" style="margin-top:8px;"><div class="code-header"><span style="font-size:11px;color:#94a3b8;">Response</span></div><div class="code-body"><pre>${esc(resStr)}</pre></div></div>`;
+            }
+            if (ep.sse) {
+                html += `<div class="code-block" style="margin-top:8px;"><div class="code-header"><span style="font-size:11px;color:#94a3b8;">Response</span></div><div class="code-body"><pre>SSE stream</pre></div></div>`;
+            }
+
+            html += `</div></div></div>`;
+        });
+
+        html += `</div>`;
+        content.insertAdjacentHTML('beforeend', html);
+    });
+
+    content.insertAdjacentHTML('beforeend', '<div class="footer">Dottie Analytics API &middot; ' + window.location.host + ' &middot; Admin bearer auth &middot; 404-on-bad-key</div>');
+    updateActiveNav();
+}
+
+// ── Interactions ──────────────────────────────────────────────────────────
+
+function setLang(lang) {
+    currentLang = lang;
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(lang === 'curl' ? 'curl' : 'java')));
+    document.querySelectorAll('.lang-tab').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(lang === 'curl' ? 'curl' : 'java')));
+    document.querySelectorAll('.code-curl').forEach(el => el.style.display = lang === 'curl' ? '' : 'none');
+    document.querySelectorAll('.code-js').forEach(el => el.style.display = lang === 'javascript' ? '' : 'none');
+}
+
+function copyCode(btn) {
+    const pre = btn.closest('.code-block').querySelector('pre:not([style*="none"])');
+    navigator.clipboard.writeText(pre.textContent).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
+    });
+}
+
+function navTo(id) {
+    const el = document.getElementById(id);
+    const container = document.getElementById('content');
+    if (el && container) {
+        container.scrollTop = el.offsetTop - container.offsetTop;
+    }
+    closeSearch();
+}
+
+function updateActiveNav() {
+    const container = document.getElementById('content');
+    const titleEl = document.getElementById('topbar-title');
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                const btn = document.querySelector(`.nav-item[onclick*="'${e.target.id}'"]`);
+                if (btn) btn.classList.add('active');
+                const h2 = e.target.querySelector('h2');
+                if (h2 && titleEl) titleEl.textContent = h2.textContent.replace('Personal Context', '').trim();
+                else if (e.target.id === 'introduction' && titleEl) titleEl.textContent = 'Introduction';
+            }
+        });
+    }, { root: container, rootMargin: '-10% 0px -80% 0px', threshold: 0 });
+    const intro = document.getElementById('introduction');
+    if (intro) observer.observe(intro);
+    container.querySelectorAll('.section').forEach(s => observer.observe(s));
+}
+
+const groupState = { 'core': true, 'reports': true, 'sites': true, 'growth': true };
+function toggleGroup(key) {
+    groupState[key] = !groupState[key];
+    document.getElementById('nav-children-' + key).style.display = groupState[key] ? '' : 'none';
+    document.getElementById('group-arrow-' + key).style.transform = groupState[key] ? '' : 'rotate(-90deg)';
+}
+
+// ── Search ───────────────────────────────────────────────────────────────
+
+let searchSelectedIndex = 0;
+let searchItems = [];
+
+const RECENT_ITEMS = [
+    { id: 'collect', title: 'Web Analytics Ingest', method: 'POST', desc: 'Public /api/send, keyed by write_key' },
+    { id: 'stats', title: 'Overview Stats', method: 'GET', desc: 'Top-line DAU/WAU/MAU + countries' },
+    { id: 'series', title: 'Series & Active', method: 'GET', desc: 'Range-scoped charts + active users' },
+    { id: 'issues', title: 'Issues', method: 'GET', desc: 'Grouped errors + resolve workflow' },
+    { id: 'sites', title: 'Sites', method: 'GET', desc: 'Multi-tenant website analytics' },
+    { id: 'site-reports', title: 'Site Reports', method: 'GET', desc: 'Per-site KPIs, pages, referrers' },
+    { id: 'downloads', title: 'Downloads', method: 'GET', desc: 'GitHub release-download tracking' },
+    { id: 'register', title: 'Register', method: 'POST', desc: 'Bootstrap a user, returns bearer' },
+    { id: 'daily-reports', title: 'Daily Reports', method: 'GET', desc: 'One-call composites (?format=md)' },
+    { id: 'health', title: 'Health & Version', method: 'GET', desc: 'Public status + client-version policy' }
+];
+
+function methodColor(m) {
+    const map = { GET: 'var(--green)', POST: 'var(--blue)', PUT: 'var(--yellow)', PATCH: 'var(--purple)', DELETE: 'var(--red)', WS: 'var(--purple)' };
+    const bgMap = { GET: 'var(--green-bg)', POST: 'var(--blue-bg)', PUT: 'var(--yellow-bg)', PATCH: 'var(--purple-bg)', DELETE: 'var(--red-bg)', WS: 'var(--purple-bg)' };
+    return `background:${bgMap[m] || 'var(--bg-alt)'};color:${map[m] || 'var(--text-muted)'}`;
+}
+
+function renderSearchResults() {
+    const r = document.getElementById('search-results');
+    const q = document.getElementById('search-input').value.trim();
+    const label = q ? `Results for "${esc(q)}"` : 'Recently Viewed';
+
+    if (q) {
+        searchItems = [];
+        const ql = q.toLowerCase();
+        for (const s of SECTIONS) {
+            if (searchItems.length >= 12) break;
+            if (s.title.toLowerCase().includes(ql) || s.desc.toLowerCase().includes(ql)) {
+                searchItems.push({ id: s.id, title: s.title, desc: s.desc, method: s.endpoints[0]?.m });
+            }
+            for (const ep of s.endpoints) {
+                if (searchItems.length >= 12) break;
+                if (ep.p.toLowerCase().includes(ql) || ep.d.toLowerCase().includes(ql) || ep.m.toLowerCase().includes(ql)) {
+                    searchItems.push({ id: s.id, title: `${ep.m} ${ep.p}`, desc: ep.d, method: ep.m });
+                }
+            }
+        }
+    } else {
+        searchItems = [...RECENT_ITEMS];
+    }
+
+    if (searchSelectedIndex >= searchItems.length) searchSelectedIndex = Math.max(0, searchItems.length - 1);
+
+    let html = `<div class="search-results-label">${label}</div>`;
+    if (searchItems.length === 0) {
+        html += `<div class="search-empty">No results found for "${esc(q)}"</div>`;
+    } else {
+        searchItems.forEach((item, i) => {
+            const sel = i === searchSelectedIndex ? ' selected' : '';
+            html += `<button class="search-result${sel}" data-idx="${i}" onclick="searchGo(${i})" onmouseenter="searchHover(${i})">`;
+            if (item.method) html += `<span class="search-result-method" style="${sel ? 'background:rgba(255,255,255,0.2);color:#fff' : methodColor(item.method)}">${item.method}</span>`;
+            html += `<div class="search-result-info"><div class="search-result-title">${item.title}</div><div class="search-result-desc">${item.desc}</div></div></button>`;
+        });
+    }
+    r.innerHTML = html;
+
+    // Scroll selected into view
+    const sel = r.querySelector('.search-result.selected');
+    if (sel) sel.scrollIntoView({ block: 'nearest' });
+}
+
+function openSearch() {
+    document.getElementById('search-overlay').classList.add('open');
+    document.getElementById('search-input').value = '';
+    searchSelectedIndex = 0;
+    setTimeout(() => { document.getElementById('search-input').focus(); renderSearchResults(); }, 50);
+}
+
+function closeSearch() { document.getElementById('search-overlay').classList.remove('open'); }
+
+function onSearch() { searchSelectedIndex = 0; renderSearchResults(); }
+
+function searchGo(idx) {
+    if (searchItems[idx]) { navTo(searchItems[idx].id); closeSearch(); }
+}
+
+function searchHover(idx) {
+    searchSelectedIndex = idx;
+    renderSearchResults();
+}
+
+function onSearchKey(e) {
+    if (e.key === 'Escape') { closeSearch(); return; }
+    if (e.key === 'ArrowDown') { e.preventDefault(); searchSelectedIndex = Math.min(searchSelectedIndex + 1, searchItems.length - 1); renderSearchResults(); return; }
+    if (e.key === 'ArrowUp') { e.preventDefault(); searchSelectedIndex = Math.max(searchSelectedIndex - 1, 0); renderSearchResults(); return; }
+    if (e.key === 'Enter') { e.preventDefault(); searchGo(searchSelectedIndex); return; }
+}
+
+document.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openSearch(); }
+    if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); openSearch(); }
+    if (e.key === 'Escape') closeSearch();
+});
+
+// ── Theme ────────────────────────────────────────────────────────────────
+
+function initTheme() {
+    const saved = localStorage.getItem('dottie-docs-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (saved === 'dark' || (!saved && prefersDark)) {
+        document.documentElement.classList.add('dark');
+    }
+    updateThemeIcon();
+}
+
+function toggleTheme() {
+    document.documentElement.classList.toggle('dark');
+    localStorage.setItem('dottie-docs-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    updateThemeIcon();
+}
+
+function updateThemeIcon() {
+    const isDark = document.documentElement.classList.contains('dark');
+    document.getElementById('theme-sun').style.display = isDark ? '' : 'none';
+    document.getElementById('theme-moon').style.display = isDark ? 'none' : '';
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────
+initTheme();
+render();
+</script>
+</body>
+</html>
