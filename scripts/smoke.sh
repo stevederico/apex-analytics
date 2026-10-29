@@ -1,21 +1,23 @@
 #!/usr/bin/env bash
-# Live smoke test for a running dottie-analytics: hits the API and the
+# Live smoke test for a running apex-analytics: hits the API and the
 # Umami-compatible collector to prove events are actually being accepted.
 #
 # Sends a desktop-style User-Agent, since a Cloudflare bot rule in front of the
 # API may 403 bare curl.
 #
 # Usage:
-#   DOTTIE_API_BASE=... DOTTIE_USER_TOKEN=... DOTTIE_ADMIN_KEY=... SMOKE_SITE_ID=... ./scripts/smoke.sh
+#   APEX_API_BASE=... DOTTIE_USER_TOKEN=... APEX_ADMIN_KEY=... SMOKE_SITE_ID=... ./scripts/smoke.sh
+#
+# The pre-rename DOTTIE_API_BASE / DOTTIE_ADMIN_KEY names still work.
 #
 # DOTTIE_USER_TOKEN is a per-user /api/register bearer. Use one whose user
 # already has an install_id: ingest fills an empty users.install_id, so a fresh
 # user would get linked to the smoke install. The shared X-Dottie-Client key is
 # retired; the script checks it now gets a 404.
 #
-# DOTTIE_API_BASE is the server to test, e.g. http://127.0.0.1:8080.
+# APEX_API_BASE is the server to test, e.g. http://127.0.0.1:8080.
 # SMOKE_SITE_ID is the site write_key the collector event is sent to.
-# SMOKE_UMAMI_URL overrides the collector (default: $DOTTIE_API_BASE/api/send).
+# SMOKE_UMAMI_URL overrides the collector (default: $APEX_API_BASE/api/send).
 # The collector check writes one real `smoke.test` event into that site, so
 # point SMOKE_SITE_ID at a dedicated smoke site, not a production one.
 #
@@ -31,12 +33,14 @@ if [ -f "$ENV_FILE" ]; then
 fi
 
 : "${DOTTIE_USER_TOKEN:?DOTTIE_USER_TOKEN not set}"
-: "${DOTTIE_ADMIN_KEY:?DOTTIE_ADMIN_KEY not set}"
-: "${DOTTIE_API_BASE:?DOTTIE_API_BASE not set (e.g. http://127.0.0.1:8080)}"
+APEX_ADMIN_KEY="${APEX_ADMIN_KEY:-${DOTTIE_ADMIN_KEY:-}}"
+APEX_API_BASE="${APEX_API_BASE:-${DOTTIE_API_BASE:-}}"
+: "${APEX_ADMIN_KEY:?APEX_ADMIN_KEY not set}"
+: "${APEX_API_BASE:?APEX_API_BASE not set (e.g. http://127.0.0.1:8080)}"
 : "${SMOKE_SITE_ID:?SMOKE_SITE_ID not set (site write_key for the collector check)}"
 
 UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Dottie/smoke-test"
-API="$DOTTIE_API_BASE"
+API="$APEX_API_BASE"
 UMAMI="${SMOKE_UMAMI_URL:-$API/api/send}"
 UMAMI_WEBSITE="$SMOKE_SITE_ID"
 INSTALL_ID="smoke-test-$(date +%s)"
@@ -53,11 +57,11 @@ code=$(curl -s -o /dev/null -w "%{http_code}" -A "$UA" "$API/api/stats")
 [ "$code" = "404" ] && pass "GET /api/stats (no key) → 404" || fail "GET /api/stats (no key) → $code (expected 404)"
 
 code=$(curl -s -o /dev/null -w "%{http_code}" -A "$UA" \
-  -H "Authorization: Bearer $DOTTIE_ADMIN_KEY" "$API/api/stats")
+  -H "Authorization: Bearer $APEX_ADMIN_KEY" "$API/api/stats")
 [ "$code" = "200" ] && pass "GET /api/stats (admin key) → 200" || fail "GET /api/stats (admin key) → $code"
 
 code=$(curl -s -o /dev/null -w "%{http_code}" -A "$UA" \
-  -H "Authorization: Bearer $DOTTIE_ADMIN_KEY" "$API/api/stats/errors?hours=1")
+  -H "Authorization: Bearer $APEX_ADMIN_KEY" "$API/api/stats/errors?hours=1")
 [ "$code" = "200" ] && pass "GET /api/stats/errors (admin key) → 200" || fail "GET /api/stats/errors → $code"
 
 code=$(curl -s -o /dev/null -w "%{http_code}" -A "$UA" -X POST \

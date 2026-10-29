@@ -5,9 +5,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use dottie_analytics::app::{build_app, AppState, VersionConfig};
-use dottie_analytics::db::Db;
-use dottie_analytics::github;
+use apex_analytics::app::{build_app, AppState, VersionConfig};
+use apex_analytics::db::Db;
+use apex_analytics::github;
 use http_body_util::BodyExt;
 use tower::ServiceExt;
 

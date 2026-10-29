@@ -11,7 +11,7 @@ import {
   grpcJson,
 } from './grpc';
 
-export const KEY = 'dottie_admin_key';
+export const KEY = 'apex_admin_key';
 
 export const getKey = (): string => localStorage.getItem(KEY) || '';
 export const setKey = (v: string): void => localStorage.setItem(KEY, v);

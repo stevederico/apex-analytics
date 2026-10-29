@@ -6,8 +6,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use dottie_analytics::app::{build_app, AppState, VersionConfig};
-use dottie_analytics::db::Db;
+use apex_analytics::app::{build_app, AppState, VersionConfig};
+use apex_analytics::db::Db;
 use sqlx::Row;
 use tower::ServiceExt; // for `oneshot`
 
@@ -64,7 +64,7 @@ fn backup_files() -> usize {
                 .filter(|e| {
                     e.file_name()
                         .to_string_lossy()
-                        .starts_with("dottie-analytics-backup-")
+                        .starts_with("apex-analytics-backup-")
                 })
                 .count()
         })

@@ -5,8 +5,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use axum::body::Body;
 use axum::http::{Request, Response, StatusCode};
-use dottie_analytics::app::{build_app, AppState, VersionConfig};
-use dottie_analytics::db::Db;
+use apex_analytics::app::{build_app, AppState, VersionConfig};
+use apex_analytics::db::Db;
 use tower::ServiceExt; // for `oneshot`
 
 const ADMIN_KEY: &str = "test-admin-key-0000000000";
@@ -116,7 +116,7 @@ async fn body_json(resp: Response<Body>) -> serde_json::Value {
 
 // Step 0: signup → install linking, experiment variant, funnel.first_success.
 
-use dottie_analytics::variant::{variant_for, CONTROL, FIRST_SUCCESS, TEST};
+use apex_analytics::variant::{variant_for, CONTROL, FIRST_SUCCESS, TEST};
 
 const DAY: i64 = 86_400_000;
 
@@ -136,7 +136,7 @@ fn install_in(arm: &str, prefix: &str) -> String {
 }
 
 fn pro_token(secret: &str, user_id: i64, email: &str) -> String {
-    dottie_analytics::jwt::mint(secret, user_id, email, None, now_ms() / 1000).unwrap()
+    apex_analytics::jwt::mint(secret, user_id, email, None, now_ms() / 1000).unwrap()
 }
 
 async fn install_of(db: &Db, user_id: i64) -> String {
@@ -383,7 +383,7 @@ async fn report_routes_take_a_variant_filter() {
     let c1 = install_in(CONTROL, "rc");
     let x1 = install_in(TEST, "rx");
     for iid in [&c1, &x1] {
-        db.record_ping(&dottie_analytics::db::Ping {
+        db.record_ping(&apex_analytics::db::Ping {
             install_id: iid.clone(),
             version: None,
         })

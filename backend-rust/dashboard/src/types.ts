@@ -1,4 +1,4 @@
-// Response shapes for the dottie-analytics admin API. These describe our own
+// Response shapes for the apex-analytics admin API. These describe our own
 // Rust endpoints (src/reports.rs), so they are trusted — see the yagni note in
 // api.ts. Fields are typed loosely (nullable) to match the SQL that can emit
 // NULLs for absent dimensions.

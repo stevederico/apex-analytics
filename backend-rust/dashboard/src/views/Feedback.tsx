@@ -114,7 +114,7 @@ function Install({ site }: { site: string }) {
     <Section title="Install widget">
       <p className="text-muted-foreground text-xs mb-2">
         Paste before &lt;/body&gt;. Uses the same write key as the tracker. Optional:
-        {' '}<span className="font-mono">DottieFeedback.identify({'{ id, name, email }'})</span>.
+        {' '}<span className="font-mono">ApexFeedback.identify({'{ id, name, email }'})</span>.
       </p>
       <pre className="overflow-x-auto border border-app bg-card p-2 text-xs font-mono select-all whitespace-pre-wrap">
         {feedbackSnippet(key)}

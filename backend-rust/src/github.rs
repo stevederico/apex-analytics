@@ -155,7 +155,7 @@ fn github_headers(token: &str, authenticated: bool) -> reqwest::header::HeaderMa
     let mut h = reqwest::header::HeaderMap::new();
     h.insert(
         reqwest::header::USER_AGENT,
-        reqwest::header::HeaderValue::from_static("dottie-analytics-growth/1.0"),
+        reqwest::header::HeaderValue::from_static("apex-analytics-growth/1.0"),
     );
     h.insert(
         reqwest::header::ACCEPT,

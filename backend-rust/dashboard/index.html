@@ -7,12 +7,25 @@
     <!-- Inline SVG favicon so the browser never requests /favicon.ico (the proxy
          root 400s it). Orange square + D, matching the brutalist accent. -->
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23ff6308'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='22' font-weight='bold' text-anchor='middle' fill='%23fff'%3ED%3C/text%3E%3C/svg%3E" />
-    <title>Dottie Analytics</title>
+    <title>Apex Analytics</title>
     <!-- Apply theme before paint to avoid a flash. Dark unless explicitly light. -->
     <script>
       (function () {
+        // One-time rename: copy pre-rename dottie_* keys (admin key, theme,
+        // scope, range) to apex_* so nobody has to re-paste the admin key.
+        try {
+          var old = [];
+          for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (k && k.indexOf('dottie_') === 0) old.push(k);
+          }
+          old.forEach(function (k) {
+            var nk = 'apex_' + k.slice(7);
+            if (localStorage.getItem(nk) == null) localStorage.setItem(nk, localStorage.getItem(k));
+          });
+        } catch (e) {}
         document.documentElement.classList.add('theme-brutalist');
-        var t = localStorage.getItem('dottie_theme');
+        var t = localStorage.getItem('apex_theme');
         if (t ? t === 'dark' : true) document.documentElement.classList.add('dark');
       })();
     </script>

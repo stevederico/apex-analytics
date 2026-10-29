@@ -23,7 +23,7 @@ export interface Tab {
   View: ComponentType<{ site: string }>;
 }
 
-export const DOTTIE_TABS: Tab[] = [
+export const NATIVE_TABS: Tab[] = [
   { id: 'overview', label: 'Overview', View: Overview },
   { id: 'lifecycle', label: 'Lifecycle', View: Lifecycle },
   { id: 'funnels', label: 'Funnels', View: Funnels },

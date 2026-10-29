@@ -1,7 +1,9 @@
-# dottie-analytics
+# apex-analytics
 
 ## Project Overview
 Rust + Axum + SQLite (sqlx) service for app registration, install pings, stats, first-party web analytics (an Umami replacement), in-app feedback, and an admin dashboard. Built to be invisible to the public web: probes get 404s, bots are disallowed, no HTML at the public root.
+
+Formerly **dottie-analytics**. The pre-rename `DOTTIE_ADMIN_KEY`, `DOTTIE_READ_KEY` and `DOTTIE_MIRROR_KEY` env vars, `X-Dottie-Mirror-*` headers, the tracker's `window.dottie` / `data-dottie-event`, and the widget's `DottieFeedback` global still work; the `APEX_*` / `apex` names win when both are set.
 
 ## Architecture
 - `backend-rust/` is the service and the only deployed artifact. axum + tokio + sqlx (bundled SQLite, JSON1). Built via `Dockerfile.rust` into one distroless binary.
@@ -26,7 +28,7 @@ cd backend-rust/dashboard && npm install && npm run build
 cd backend-rust/widget && npm install && npm run build
 
 cd backend-rust
-export DOTTIE_ADMIN_KEY=$(openssl rand -hex 32)
+export APEX_ADMIN_KEY=$(openssl rand -hex 32)
 cargo run     # listens on :8080
 cargo test
 ```
@@ -34,10 +36,11 @@ See `README.md` for every environment variable.
 
 ## Key Patterns
 - Per-user bearer for app writes (`desktop_bearer_guard`); admin bearer for stats and admin reads. There is no shared app key: any `X-Dottie-Client` request gets a 404
-- Optional read-only report key (`DOTTIE_READ_KEY`): GET report endpoints only, never writes or the dashboard
+- Optional read-only report key (`APEX_READ_KEY`): GET report endpoints only, never writes or the dashboard
 - Per-user bearer from `/api/register` for anything that should be metered per user
 - Timing-safe comparisons on every key check (`safe_equal`)
 - Missing or wrong key returns 404, not 401/403, so endpoints look nonexistent to probes
+- The dashboard reads data over gRPC-Web (`apex.admin.v1.Admin`), same admin bearer
 - No blanket CORS. Public ingest (`/api/collect`, `/api/feedback`) reflects the site origin in-handler
 - Per-IP rate limits on every `/api/*` route and the gRPC-Web admin service (static assets, `/health`, `/docs`, `/dashboard` are unlimited)
 - `robots.txt` disallows all; `X-Robots-Tag: noindex, nofollow, noarchive` on every response; `/` is 404

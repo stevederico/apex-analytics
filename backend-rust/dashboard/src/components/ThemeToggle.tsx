@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@stevederico/skateboard-ui/shadcn/ui/button';
 
-const THEME_KEY = 'dottie_theme';
+const THEME_KEY = 'apex_theme';
 
 export function ThemeToggle() {
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'));

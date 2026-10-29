@@ -1,4 +1,4 @@
-# dottie-analytics API reference
+# apex-analytics API reference
 
 Base URL: your deployment (`http://localhost:8080` when self-hosting). Generated from `backend-rust/src/app.rs`.
 
@@ -7,9 +7,9 @@ Base URL: your deployment (`http://localhost:8080` when self-hosting). Generated
 - **Public** — no auth. Rate-limited only.
 - **Desktop bearer** — `Authorization: Bearer <user token>` from `/api/register` (app writes). The old shared `X-Dottie-Client` key is retired → 404.
 - **Write key** — per-site `write_key` in the request body (`/api/send` / `/api/collect` and `/api/feedback`).
-- **Admin** — `Authorization: Bearer <DOTTIE_ADMIN_KEY>` (all reads/reports and every write).
-- **Read key** (optional) — `Authorization: Bearer <DOTTIE_READ_KEY>` on admin **GET** routes only. Never unlocks POST/PATCH/DELETE, imports, or the dashboard/gRPC path. Empty → off.
-- **Report query key** — `/api/report/daily` and `/api/report/site-daily` also accept `?key=<DOTTIE_READ_KEY>` (GET only). The admin key is rejected in the query string.
+- **Admin** — `Authorization: Bearer <APEX_ADMIN_KEY>` (all reads/reports and every write).
+- **Read key** (optional) — `Authorization: Bearer <APEX_READ_KEY>` on admin **GET** routes only. Never unlocks POST/PATCH/DELETE, imports, or the dashboard/gRPC path. Empty → off.
+- **Report query key** — `/api/report/daily` and `/api/report/site-daily` also accept `?key=<APEX_READ_KEY>` (GET only). The admin key is rejected in the query string.
 
 Probe resistance: missing/wrong key returns **404**, not 401/403. No blanket CORS; timing-safe key comparisons.
 
@@ -50,7 +50,7 @@ Rates are per route path per IP: each concrete path (`/api/feedback/1`, `/api/fe
 
 ## Admin (Bearer) — GitHub growth (growth-chart merge), 240/min
 
-Same auth as all other admin reads: **Bearer `DOTTIE_ADMIN_KEY`**, missing/wrong key → **404** (not public).
+Same auth as all other admin reads: **Bearer `APEX_ADMIN_KEY`**, missing/wrong key → **404** (not public).
 
 | Method | Path | Purpose |
 |---|---|---|

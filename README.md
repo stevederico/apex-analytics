@@ -1,8 +1,8 @@
 <div align="center">
 
-# dottie-analytics
+# apex-analytics
 
-### a rust + axum + sqlite service for dottie's registration, install pings, stats, and first-party web analytics
+### a rust + axum + sqlite service for dottie's registration, install pings, stats, first-party web analytics, and in-app feedback
 
 </div>
 
@@ -12,9 +12,9 @@
 
 ```bash
 cd backend-rust
-export DOTTIE_ADMIN_KEY=$(openssl rand -hex 32)
+export APEX_ADMIN_KEY=$(openssl rand -hex 32)
 cargo run
-# → dottie-analytics listening on :8080
+# → apex-analytics listening on :8080
 ```
 
 See [Self-hosting](#self-hosting) for a full setup.
@@ -34,8 +34,18 @@ See [Self-hosting](#self-hosting) for a full setup.
 - **Reports** — `/api/stats/{active,series,retention,activation,funnel,lifecycle,attribution,issues,breakdown,users}`, `PATCH /api/issues/:id`.
 - **Multi-tenant web analytics** (Umami replacement) — `/api/sites`, `/api/site/{summary,series,events,pages,referrers,breakdown}`, `POST /api/import/site-events`.
 - **Landing mirror** — `POST /api/landing-event`, `/api/stats/landing-*`, `DELETE /api/landing/:iid`.
-- **Dashboard** — `/dashboard`, a React/Vite admin SPA embedded in the binary. Data loads over **gRPC-Web** (`dottie.admin.v1.Admin`); REST admin routes remain for scripts/CLI.
+- **Dashboard** — `/dashboard`, a React/Vite admin SPA embedded in the binary. Data loads over **gRPC-Web** (`apex.admin.v1.Admin`); REST admin routes remain for scripts/CLI.
 - **Growth** — GitHub downloads + stars/forks/clones/views (growth-chart merge). Admin-only `/api/downloads*`, `/api/metrics*`, `/api/repos*` (404 without bearer, like stats). Repos can `linked_site_id` → site/native reports include a `growth` brief. Set `GITHUB_TOKEN` + `GITHUB_REPOS`.
+
+### **Feedback Assistant**
+An in-app feedback widget for any site you track. Submissions land in the same SQLite DB and dashboard as that site's analytics.
+- **One tag** — `<script defer src="https://your-host/feedback.js" data-website-id="<write_key>"></script>`, the same `write_key` as `/script.js`. Optional `data-app-version`; `data-host` overrides the API origin (defaults to the script's origin).
+- **JS API** — `window.ApexFeedback.init({ website, apiUrl, appVersion })`, `.identify({ id, name, email })` to attach the signed-in user, `.show()` to open the popover.
+- **Screenshots** — optional, JPEG/PNG ≤ 2 MiB, stored inline as a BLOB. "Screenshot" renders the viewport with html2canvas-pro (lazy-loaded from `/feedback/html2canvas-v2.js`, no permission prompt); "Share screen" captures real pixels via `getDisplayMedia`.
+- **POST `/api/feedback`** — public ingest. `multipart/form-data` (`website`, `message`, `url`, `appVersion`, `endUserId`, `endUserName`, `endUserEmail`, optional `file`) or JSON without a screenshot. CORS reflects the caller's origin; unknown key → empty 404.
+- **Limits** — 20/min per IP; message > 5000 chars → 413; screenshot > 2 MiB → 413, not JPEG/PNG → 415; per-site `FEEDBACK_DAILY_BUDGET` per rolling 24h → 429.
+- **Triage (admin bearer)** — `GET /api/stats/feedback?site=&status=&days=&limit=` (list + status counts), `GET /api/feedback/:id/screenshot`, `PATCH|POST /api/feedback/:id` `{status: new|read|archived}`. Also a Feedback tab in `/dashboard`.
+- **Import** — `POST /api/import/feedback` (admin key only) backfills rows from another store; all-or-nothing validation, duplicates skipped, `dry_run` previews.
 
 ### **Security**
 - **Per-user bearer** for app-authenticated writes.
@@ -62,24 +72,27 @@ Limits count per route path per IP (`/api/feedback/1` and `/api/feedback/2` are 
 
 ### Environment Variables
 
+Formerly **dottie-analytics**. The pre-rename `DOTTIE_ADMIN_KEY`, `DOTTIE_READ_KEY` and `DOTTIE_MIRROR_KEY` names still work; the `APEX_*` name wins when both are set.
+
 | Variable | Purpose |
 |---|---|
-| `DOTTIE_ADMIN_KEY` | Your private bearer token for `/api/stats` and the admin dashboard |
+| `APEX_ADMIN_KEY` | Your private bearer token for `/api/stats` and the admin dashboard |
 | `DB_PATH` | SQLite file path (default `./databases/dottie-api.db`; use a mounted volume in production) |
 | `PORT` | HTTP port (default `8080`) |
 | `GITHUB_TOKEN` | GitHub PAT for traffic metrics (clones/views); optional for public release downloads |
 | `GITHUB_REPOS` | Comma-separated `owner/name[:kind]` list seeded into the growth tracker while it is empty. Unset → nothing tracked |
 | `GITHUB_SITE_LINKS` | Comma-separated `owner/name=<site uuid or native>` links, applied on startup to repos with no link |
 | `LANDING_ALLOWED_ORIGIN` | The one origin allowed to call `/api/landing-visit` and `/api/landing-event` (e.g. `https://www.example.com`; trailing `/` and case are normalized; one origin, not a list). Unset → those routes return 403 and startup logs a warning |
-| `DOTTIE_READ_KEY` | Optional second bearer for GET report endpoints only (cron/report scripts). Never unlocks writes or `/dashboard`. Empty → off |
+| `APEX_READ_KEY` | Optional second bearer for GET report endpoints only (cron/report scripts). Never unlocks writes or `/dashboard`. Empty → off |
 | `DOTTIE_EXCLUDED_INSTALL_IDS` | Comma-separated install ids dropped at ingest (dev machines). Empty → none |
 | `DOTTIE_EXCLUDED_EMAILS` | Comma-separated emails dropped at ingest. Case-insensitive. Empty → none |
 | `REPORT_EXCLUDE_EMAILS` | Comma-separated emails hidden from daily-report person lists only (totals/DAU unaffected). Trimmed, case-insensitive. Empty → exclude nothing |
 | `REPORT_EXCLUDE_INSTALLS` | Comma-separated install ids hidden from daily-report person lists only. Trimmed, case-insensitive. Empty → exclude nothing |
 | `FEEDBACK_DAILY_BUDGET` | Per-site feedback submissions per rolling 24h (default `1000`) |
+| `FEEDBACK_LEGACY_KEYS` | Optional `pk_a=<site id>,pk_b=<site id>` map so embeds from the older feedback-assistant widget (`data-project="pk_…"`) keep working. Unset → off |
 | `REGISTER_IP_HOURLY_MAX` | New accounts one IP may create per hour (default `10`). Counted in the DB, so it survives a restart; re-registering a known email never counts |
 | `PRO_JWT_SECRET` | Optional HS256 secret for verifying/minting JWT bearers. Empty → opaque 64-hex tokens. Never logged |
-| `PRO_STATS_URL` | Optional upstream for the daily report's Pro fleet/refund block (Dottie Pro integration). Unset → no fetch, sections print `unavailable`. The request carries `DOTTIE_ADMIN_KEY`, so the host must be loopback or `PRO_STATS_ALLOWED_HOST`; anything else is skipped with a startup warning |
+| `PRO_STATS_URL` | Optional upstream for the daily report's Pro fleet/refund block (Dottie Pro integration). Unset → no fetch, sections print `unavailable`. The request carries `APEX_ADMIN_KEY`, so the host must be loopback or `PRO_STATS_ALLOWED_HOST`; anything else is skipped with a startup warning |
 | `PRO_STATS_ALLOWED_HOST` | The one non-loopback host `PRO_STATS_URL` may use (exact hostname, e.g. `pro.internal`). Empty → loopback only |
 | `DOTTIE_LATEST_VERSION` / `DOTTIE_MIN_VERSION` / `DOTTIE_DOWNLOAD_URL` | Values returned by `GET /api/version` |
 
@@ -98,14 +111,14 @@ Nothing here depends on Dottie's infrastructure. You need Rust (stable) and, onl
 1. Generate the admin key
 
    ```bash
-   openssl rand -hex 32   # DOTTIE_ADMIN_KEY (admin reads + /dashboard)
+   openssl rand -hex 32   # APEX_ADMIN_KEY (admin reads + /dashboard)
    ```
 
 2. Run from source
 
    ```bash
    cd backend-rust
-   export DOTTIE_ADMIN_KEY=...
+   export APEX_ADMIN_KEY=...
    export DB_PATH=./databases/analytics.db   # created on first run; migrations run at startup
    cargo run --release
    ```
@@ -113,14 +126,14 @@ Nothing here depends on Dottie's infrastructure. You need Rust (stable) and, onl
 3. Or run the container
 
    ```bash
-   docker build -f Dockerfile.rust -t dottie-analytics .
+   docker build -f Dockerfile.rust -t apex-analytics .
    docker run -p 8080:8080 \
-     -e DOTTIE_ADMIN_KEY=... \
+     -e APEX_ADMIN_KEY=... \
      -e DB_PATH=/data/analytics.db -v analytics-data:/data \
-     dottie-analytics
+     apex-analytics
    ```
 
-4. Open `http://localhost:8080/dashboard` and paste `DOTTIE_ADMIN_KEY` once
+4. Open `http://localhost:8080/dashboard` and paste `APEX_ADMIN_KEY` once
 5. Create a site (`POST /api/sites`, admin bearer) and embed its `write_key`:
 
    ```html
@@ -128,10 +141,11 @@ Nothing here depends on Dottie's infrastructure. You need Rust (stable) and, onl
    ```
 
 6. Optional
-   - `DOTTIE_READ_KEY` for cron/report scripts
+   - `APEX_READ_KEY` for cron/report scripts
    - `REPORT_EXCLUDE_EMAILS` / `REPORT_EXCLUDE_INSTALLS` to hide your own accounts from daily-report person lists
    - `GITHUB_TOKEN` + `GITHUB_REPOS` (+ `GITHUB_SITE_LINKS`) for the growth tracker
    - `LANDING_ALLOWED_ORIGIN` if you use the landing-page mirror
+   - Add the feedback widget with the same `write_key`: `<script defer src="https://your-host/feedback.js" data-website-id="<write_key>"></script>`
 
 Put it behind a TLS proxy and mount a persistent volume for `DB_PATH`. Back up the SQLite file.
 
@@ -163,12 +177,12 @@ Any container host works. `Dockerfile.rust` builds a distroless image (no shell)
 ### Docker (local)
 
 ```bash
-docker build -f Dockerfile.rust -t dottie-analytics .
+docker build -f Dockerfile.rust -t apex-analytics .
 docker run -p 8080:8080 \
-  -e DOTTIE_ADMIN_KEY=... \
+  -e APEX_ADMIN_KEY=... \
   -e DB_PATH=/data/dottie-api.db \
-  -v dottie-data:/data \
-  dottie-analytics
+  -v apex-data:/data \
+  apex-analytics
 ```
 
 ### curl sanity check
@@ -184,7 +198,7 @@ curl -X POST https://your-host/api/register \
 
 # should be {users, dau, mau, pings_24h}
 curl https://your-host/api/stats \
-  -H "Authorization: Bearer <DOTTIE_ADMIN_KEY>"
+  -H "Authorization: Bearer <APEX_ADMIN_KEY>"
 ```
 
 <br />

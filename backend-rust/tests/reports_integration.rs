@@ -16,9 +16,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use axum::body::Body;
 use axum::http::{Request, Response, StatusCode};
-use dottie_analytics::app::{build_app, AppState, VersionConfig};
-use dottie_analytics::db::{Db, Diagnostic, Event, Ping};
-use dottie_analytics::reports::ReportExclude;
+use apex_analytics::app::{build_app, AppState, VersionConfig};
+use apex_analytics::db::{Db, Diagnostic, Event, Ping};
+use apex_analytics::reports::ReportExclude;
 use serde_json::{json, Value};
 use tower::ServiceExt; // for `oneshot`
 
@@ -555,7 +555,7 @@ async fn activation_funnel_clamps_window() {
 #[tokio::test]
 async fn activation_funnel_activated_user_shape() {
     let (db, p) = fresh().await;
-    db.register_user(&dottie_analytics::db::RegisterUser {
+    db.register_user(&apex_analytics::db::RegisterUser {
         name: "Real".into(),
         email: "real@example.com".into(),
         install_id: "act-1".into(),
@@ -990,7 +990,7 @@ async fn report_daily_activity_lists_and_excludes() {
         " operator@example.com ,",
         "00000000-0000-0000-0000-000000000001",
     ));
-    db.register_user(&dottie_analytics::db::RegisterUser {
+    db.register_user(&apex_analytics::db::RegisterUser {
         name: "Real".into(),
         email: "real@example.com".into(),
         install_id: "act-real-1".into(),
@@ -1007,7 +1007,7 @@ async fn report_daily_activity_lists_and_excludes() {
     .unwrap();
     // Operator noise — must not appear in person lists. One matches by email
     // (different case), one by install id only.
-    db.register_user(&dottie_analytics::db::RegisterUser {
+    db.register_user(&apex_analytics::db::RegisterUser {
         name: "Operator".into(),
         email: "Operator@Example.com".into(),
         install_id: "act-operator-1".into(),
@@ -1022,7 +1022,7 @@ async fn report_daily_activity_lists_and_excludes() {
     })
     .await
     .unwrap();
-    db.register_user(&dottie_analytics::db::RegisterUser {
+    db.register_user(&apex_analytics::db::RegisterUser {
         name: "Dev box".into(),
         email: "devbox@example.com".into(),
         install_id: "00000000-0000-0000-0000-000000000001".into(),

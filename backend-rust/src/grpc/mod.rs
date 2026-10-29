@@ -8,7 +8,7 @@
 //! long-lived RPC, push the first snapshot immediately, then re-poll the DB and
 //! emit only when the JSON payload changes. Client abort = hangup.
 //!
-//! Auth: `authorization: Bearer <DOTTIE_ADMIN_KEY>` metadata — wrong/missing →
+//! Auth: `authorization: Bearer <APEX_ADMIN_KEY>` metadata — wrong/missing →
 //! `NOT_FOUND` (probe-resistant, same idea as HTTP 404). Rate limit: 30/min/IP
 //! under path key `grpc.admin` (once per stream open, not per tick).
 
@@ -26,7 +26,7 @@ use crate::middleware::{client_ip, safe_equal};
 use crate::validate::{js_number, parse_num_query};
 
 pub mod pb {
-    tonic::include_proto!("dottie.admin.v1");
+    tonic::include_proto!("apex.admin.v1");
 }
 
 use pb::admin_server::{Admin, AdminServer};

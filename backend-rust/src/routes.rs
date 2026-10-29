@@ -840,16 +840,17 @@ fn clamp_str_owned(s: &str, max: usize) -> String {
 /// (= the site's write_key) and optional `data-host` off its own `<script>`
 /// tag, auto-sends a pageview on load + on SPA route change, and exposes
 /// Umami-shaped APIs so tag-alone / dual-fire sites keep events:
-/// - `dottie.track(name, data)` (+ `track()` pageview, `track(payload)`)
-/// - `dottie.identify(id|data, data?)` — sessionStorage + `identify` event;
+/// - `apex.track(name, data)` (+ `track()` pageview, `track(payload)`);
+///   `window.dottie` is the same object for pre-rename embeds
+/// - `apex.identify(id|data, data?)` — sessionStorage + `identify` event;
 ///   subsequent payloads merge session data into `data` (no person merge)
-/// - click capture: `data-umami-event` / `data-dottie-event` (+ `*-event-*` props)
+/// - click capture: `data-umami-event` / `data-apex-event` / `data-dottie-event` (+ `*-event-*` props)
 /// Does **not** set `window.umami` (dual-fire must not clobber the real Umami tag).
 /// Uses `sendBeacon` (falls back to keepalive `fetch` with text/plain so the
 /// request stays "simple" and skips CORS preflight). Guards: bails on
 /// localhost/127.0.0.1/::1 and, if `data-domains` is set, on any hostname not
 /// in that comma list — so a plain tag is safe on dev without a wrapper.
-/// Visitor opt-out: bails if `localStorage['dottie.disabled']==='1'` OR
+/// Visitor opt-out: bails if `localStorage['apex.disabled']`, `['dottie.disabled']` OR
 /// `localStorage['umami.disabled']==='1'` (Umami-compatible kill-switch).
 const TRACKER_JS: &str = r#"(function(){
   var s=document.currentScript; if(!s) return;
@@ -857,7 +858,7 @@ const TRACKER_JS: &str = r#"(function(){
   var host=s.getAttribute('data-host')||new URL(s.src).origin;
   var hn=location.hostname;
   if(hn==='localhost'||hn==='127.0.0.1'||hn==='::1'||hn==='') return;
-  try{ var od=localStorage.getItem('dottie.disabled')==='1'||localStorage.getItem('umami.disabled')==='1'; if(od) return; }catch(e){}
+  try{ var od=localStorage.getItem('apex.disabled')==='1'||localStorage.getItem('dottie.disabled')==='1'||localStorage.getItem('umami.disabled')==='1'; if(od) return; }catch(e){}
   var dm=s.getAttribute('data-domains');
   if(dm&&dm.split(',').map(function(x){return x.trim();}).indexOf(hn)<0) return;
   var kId='dottie.id.'+id, kData='dottie.data.'+id;
@@ -899,11 +900,11 @@ const TRACKER_JS: &str = r#"(function(){
   document.addEventListener('click',function(e){
     var el=e.target;
     while(el&&el!==document&&el.getAttribute){
-      var name=el.getAttribute('data-umami-event')||el.getAttribute('data-dottie-event');
+      var name=el.getAttribute('data-umami-event')||el.getAttribute('data-apex-event')||el.getAttribute('data-dottie-event');
       if(name){
         var data={}, attrs=el.attributes;
         for(var i=0;i<attrs.length;i++){
-          var an=attrs[i].name, m=an.match(/^data-(?:umami|dottie)-event-(.+)$/);
+          var an=attrs[i].name, m=an.match(/^data-(?:umami|apex|dottie)-event-(.+)$/);
           if(m) data[m[1]]=attrs[i].value;
         }
         send('event',{name:name,data:Object.keys(data).length?data:undefined});
@@ -912,7 +913,7 @@ const TRACKER_JS: &str = r#"(function(){
       el=el.parentNode;
     }
   },true);
-  window.dottie={track:track,identify:identify};
+  window.apex=window.dottie={track:track,identify:identify};
   function view(){ send('pageview'); }
   view();
   var push=history.pushState;
@@ -1714,7 +1715,7 @@ fn render_sites_daily_md(b: &Value) -> String {
     let n = |v: &Value| v.as_i64().unwrap_or(0);
     let t = &b["totals"];
     let mut out = String::new();
-    let _ = writeln!(out, "# Dottie Sites Daily (last 24h)\n");
+    let _ = writeln!(out, "# Apex Sites Daily (last 24h)\n");
     let _ = writeln!(
         out,
         "**{} sites** · views {} · visitors {} · visits {} · events {}\n",
@@ -1753,7 +1754,7 @@ pub async fn stats(State(state): State<AppState>) -> Response {
 }
 
 /// Host allowlist for the Pro stats fetch. The request carries
-/// `DOTTIE_ADMIN_KEY`, so an env override to an attacker URL would exfiltrate
+/// `APEX_ADMIN_KEY`, so an env override to an attacker URL would exfiltrate
 /// it. Loopback always passes; one more host only via `PRO_STATS_ALLOWED_HOST`
 /// (`allowed_host`, exact, lowercase), so a bad URL needs two env mistakes.
 pub(crate) fn pro_stats_url_allowed(url: &str, allowed_host: &str) -> bool {
@@ -1801,7 +1802,7 @@ async fn fetch_pro_stats(url: &str, allowed_host: &str, admin_key: &str) -> Opti
     let resp = client
         .get(url)
         .header("Authorization", format!("Bearer {admin_key}"))
-        .header("User-Agent", "dottie-analytics-report/1.0")
+        .header("User-Agent", "apex-analytics-report/1.0")
         .send()
         .await
         .ok()?;

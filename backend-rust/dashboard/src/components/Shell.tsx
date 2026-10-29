@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, clearKey } from '../api';
 import type { SitesResponse } from '../types';
 import { useAsync } from '../lib/async';
-import { DOTTIE_TABS, SITE_TABS, REPO_TABS, type Tab } from '../views/registry';
+import { NATIVE_TABS, SITE_TABS, REPO_TABS, type Tab } from '../views/registry';
 import Growth from '../views/Growth';
 import { HeaderSlotContext } from '../lib/headerSlot';
 import { loadScope, saveScope, ScopeNavProvider, type Scope } from '../lib/scope';
@@ -40,8 +40,8 @@ function tabsFor(scope: Scope, linkedRepo: string | null): Tab[] {
     return [SITE_TABS[0]!, repoTab, ...SITE_TABS.slice(1)];
   }
   // native
-  if (!repoTab) return DOTTIE_TABS;
-  return [DOTTIE_TABS[0]!, repoTab, ...DOTTIE_TABS.slice(1)];
+  if (!repoTab) return NATIVE_TABS;
+  return [NATIVE_TABS[0]!, repoTab, ...NATIVE_TABS.slice(1)];
 }
 
 function viewProp(scope: Scope, currentTab: string, linkedRepo: string | null): string {
@@ -61,8 +61,8 @@ export function Shell({ current, navigate, onSignOut }: Props) {
   // Settings / header “+” dispatch this so the switcher picks up new properties.
   useEffect(() => {
     const onSites = () => setSitesTick((t) => t + 1);
-    window.addEventListener('dottie:sites-changed', onSites);
-    return () => window.removeEventListener('dottie:sites-changed', onSites);
+    window.addEventListener('apex:sites-changed', onSites);
+    return () => window.removeEventListener('apex:sites-changed', onSites);
   }, []);
 
   const sitesState = useAsync(
@@ -124,13 +124,13 @@ export function Shell({ current, navigate, onSignOut }: Props) {
   const active = tabs.find((t) => t.id === current) ?? tabs[0]!;
   const View = active.View;
 
-  // Browser tab: "Overview · Dottie Desktop · Dottie Analytics"
+  // Browser tab: "Overview · Dottie Desktop · Apex Analytics"
   useEffect(() => {
     const scopeName = scopeLabel(scope, sites);
     const tabName = isSettings ? 'Settings' : active.label;
-    document.title = `${tabName} · ${scopeName} · Dottie Analytics`;
+    document.title = `${tabName} · ${scopeName} · Apex Analytics`;
     return () => {
-      document.title = 'Dottie Analytics';
+      document.title = 'Apex Analytics';
     };
   }, [scope, sites, isSettings, active.label]);
 

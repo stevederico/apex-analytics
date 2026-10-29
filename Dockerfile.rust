@@ -1,4 +1,4 @@
-# Rust (axum + sqlx) image for dottie-analytics. Multi-stage: a Debian-based
+# Rust (axum + sqlx) image for apex-analytics. Multi-stage: a Debian-based
 # Rust builder compiles a release binary, then a tiny distroless runtime ships
 # just that binary.
 #
@@ -27,7 +27,7 @@ WORKDIR /dash
 COPY backend-rust/dashboard/package.json backend-rust/dashboard/package-lock.json ./
 RUN npm ci
 COPY backend-rust/dashboard/ ./
-# vite.config reads ../../CHANGELOG.md for __DOTTIE_VERSION__ (Settings shows it);
+# vite.config reads ../../CHANGELOG.md for __APEX_VERSION__ (Settings shows it);
 # without this the prod dashboard reported 0.0.0.
 COPY CHANGELOG.md /CHANGELOG.md
 RUN npm run build
@@ -66,8 +66,8 @@ RUN cargo build --release
 # VERIFY at build time: the binary must NOT pull an external libsqlite3, and its
 # only dynamic deps should be the C runtime that distroless/cc provides. Build
 # FAILS loudly if libsqlite3 ever leaks in as a dynamic dependency.
-RUN ldd target/release/dottie-analytics \
-    && if ldd target/release/dottie-analytics | grep -qi sqlite; then \
+RUN ldd target/release/apex-analytics \
+    && if ldd target/release/apex-analytics | grep -qi sqlite; then \
          echo "FAIL: external libsqlite3 dynamic dependency present" >&2; exit 1; \
        fi \
     && echo "OK: SQLite is statically bundled (no external libsqlite3)"
@@ -76,7 +76,7 @@ RUN ldd target/release/dottie-analytics \
 # distroless/cc-debian12: glibc + libgcc + libstdc++, no shell, no package mgr.
 FROM gcr.io/distroless/cc-debian12
 
-COPY --from=builder /build/target/release/dottie-analytics /usr/local/bin/dottie-analytics
+COPY --from=builder /build/target/release/apex-analytics /usr/local/bin/apex-analytics
 
 # Runtime config. PORT/DB_PATH mirror server.js defaults; the auth keys and
 # version policy are supplied by the deploy env (Railway). DB_PATH points at a
@@ -88,4 +88,4 @@ ENV PORT=8080 \
 # DOTTIE_MIN_VERSION / DOTTIE_DOWNLOAD_URL are injected at deploy time.
 
 EXPOSE 8080
-CMD ["/usr/local/bin/dottie-analytics"]
+CMD ["/usr/local/bin/apex-analytics"]

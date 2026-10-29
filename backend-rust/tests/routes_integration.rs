@@ -13,8 +13,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use axum::body::Body;
 use axum::http::{Request, Response, StatusCode};
-use dottie_analytics::app::{build_app, AppState, VersionConfig};
-use dottie_analytics::db::Db;
+use apex_analytics::app::{build_app, AppState, VersionConfig};
+use apex_analytics::db::Db;
 use tower::ServiceExt; // for `oneshot`
 
 const ADMIN_KEY: &str = "test-admin-key-0000000000";
@@ -353,7 +353,7 @@ async fn ping_200_with_jwt_bearer_without_a_prior_row() {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs() as i64;
-    let token = dottie_analytics::jwt::mint("ingest-secret", 99, "jwt@test.local", Some("dev-9"), now)
+    let token = apex_analytics::jwt::mint("ingest-secret", 99, "jwt@test.local", Some("dev-9"), now)
         .unwrap();
     let app = build_app(state_for(db.clone()));
     let resp = app
@@ -378,7 +378,7 @@ async fn ping_404_with_forged_jwt() {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs() as i64;
-    let forged = dottie_analytics::jwt::mint("other-secret", 1, "a@b.c", None, now).unwrap();
+    let forged = apex_analytics::jwt::mint("other-secret", 1, "a@b.c", None, now).unwrap();
     let app = build_app(state_for(db));
     let resp = app
         .oneshot(req_post(
@@ -583,12 +583,12 @@ async fn register_mints_a_signed_token_and_upgrades_a_legacy_one() {
     assert_eq!(resp.status(), StatusCode::OK);
     let token = body_json(resp).await["token"].as_str().unwrap().to_string();
 
-    assert!(dottie_analytics::jwt::looks_like_jwt(&token), "got {token}");
+    assert!(apex_analytics::jwt::looks_like_jwt(&token), "got {token}");
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs() as i64;
-    let claims = dottie_analytics::jwt::verify("integration-secret", &token, now).expect("verifies");
+    let claims = apex_analytics::jwt::verify("integration-secret", &token, now).expect("verifies");
     assert_eq!(claims.email, "jay@test.local");
     assert_eq!(claims.device_id.as_deref(), Some("dev-jwt"));
 
@@ -621,16 +621,16 @@ async fn register_mints_a_signed_token_and_upgrades_a_legacy_one() {
         .unwrap();
     let upgraded = body_json(resp).await["token"].as_str().unwrap().to_string();
     assert!(
-        dottie_analytics::jwt::looks_like_jwt(&upgraded),
+        apex_analytics::jwt::looks_like_jwt(&upgraded),
         "a legacy token is replaced on re-registration — this is the migration"
     );
-    assert!(dottie_analytics::jwt::verify("integration-secret", &upgraded, now).is_ok());
+    assert!(apex_analytics::jwt::verify("integration-secret", &upgraded, now).is_ok());
     cleanup(&p);
 }
 
 /// Force a row back to a legacy 64-hex token, the shape every install carried
 /// before signed tokens existed.
-async fn sqlx_set_legacy_token(db: &dottie_analytics::db::Db, user_id: i64) {
+async fn sqlx_set_legacy_token(db: &apex_analytics::db::Db, user_id: i64) {
     db.set_token_for_test(user_id, &"a".repeat(64)).await.expect("set legacy token");
 }
 

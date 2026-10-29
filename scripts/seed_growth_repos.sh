@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# Seed GitHub growth repos + snapshot downloads/metrics on a running dottie-analytics.
+# Seed GitHub growth repos + snapshot downloads/metrics on a running apex-analytics.
 # Usage:
-#   DOTTIE_ADMIN_KEY=… ./scripts/seed_growth_repos.sh <base_url> <owner/name>...
+#   APEX_ADMIN_KEY=… ./scripts/seed_growth_repos.sh <base_url> <owner/name>...
+# (the pre-rename DOTTIE_ADMIN_KEY also works)
 set -euo pipefail
 
 BASE="${1:?usage: seed_growth_repos.sh <base_url> <owner/name>...}"
 shift
 [ "$#" -gt 0 ] || { echo "usage: seed_growth_repos.sh <base_url> <owner/name>..." >&2; exit 1; }
 UA="${DOTTIE_UA:-Mozilla/5.0 Dottie/2026.7.12}"
-KEY="${DOTTIE_ADMIN_KEY:?set DOTTIE_ADMIN_KEY}"
+KEY="${APEX_ADMIN_KEY:-${DOTTIE_ADMIN_KEY:?set APEX_ADMIN_KEY}}"
 
 REPOS=("$@")
 

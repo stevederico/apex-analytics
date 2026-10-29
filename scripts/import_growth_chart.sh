@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Pull history from live growth-chart and push into dottie-analytics.
+# Pull history from live growth-chart and push into apex-analytics.
 # Usage:
-#   DOTTIE_ADMIN_KEY=… ./scripts/import_growth_chart.sh <dottie_base> <growth_base>
+#   APEX_ADMIN_KEY=… ./scripts/import_growth_chart.sh <apex_base> <growth_base>
+# (the pre-rename DOTTIE_ADMIN_KEY also works)
 set -euo pipefail
 
-DOTTIE="${1:?usage: import_growth_chart.sh <dottie_base> <growth_base>}"
-GROWTH="${2:?usage: import_growth_chart.sh <dottie_base> <growth_base>}"
+APEX="${1:?usage: import_growth_chart.sh <apex_base> <growth_base>}"
+GROWTH="${2:?usage: import_growth_chart.sh <apex_base> <growth_base>}"
 UA="${DOTTIE_UA:-Mozilla/5.0 Dottie/2026.7.12}"
-KEY="${DOTTIE_ADMIN_KEY:?set DOTTIE_ADMIN_KEY}"
+KEY="${APEX_ADMIN_KEY:-${DOTTIE_ADMIN_KEY:?set APEX_ADMIN_KEY}}"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
@@ -65,7 +66,7 @@ import urllib.request
 
 def post(body):
     req = urllib.request.Request(
-        "$DOTTIE/api/import/github-growth",
+        "$APEX/api/import/github-growth",
         data=json.dumps(body).encode(),
         headers={
             "Authorization": "Bearer $KEY",

@@ -62,7 +62,7 @@ export default defineConfig({
   base: '/dashboard/',
   plugins: [react(), tailwindcss(), inlineDashboard()],
   define: {
-    __DOTTIE_VERSION__: JSON.stringify(appVersion()),
+    __APEX_VERSION__: JSON.stringify(appVersion()),
   },
   resolve: {
     // skateboard-ui expects a single React instance.
@@ -93,7 +93,7 @@ export default defineConfig({
     proxy: {
       '/api': 'http://127.0.0.1:8080',
       '/health': 'http://127.0.0.1:8080',
-      '/dottie.admin.v1.Admin': 'http://127.0.0.1:8080',
+      '/apex.admin.v1.Admin': 'http://127.0.0.1:8080',
     },
   },
 });

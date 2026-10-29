@@ -55,17 +55,26 @@ pub fn safe_equal(a: &[u8], b: &[u8]) -> bool {
     diff == 0
 }
 
-/// True when `X-Dottie-Mirror-Key` matches `DOTTIE_MIRROR_KEY`. The Wally
-/// proxy sets this so a server-side forward can pass the real visitor IP
-/// and country. A missing or wrong key is ignored.
+/// Mirror key from env: `APEX_MIRROR_KEY`, else the pre-rename `DOTTIE_MIRROR_KEY`.
+fn mirror_key_env() -> String {
+    crate::app::env_first(&["APEX_MIRROR_KEY", "DOTTIE_MIRROR_KEY"])
+}
+
+/// Trimmed `X-Apex-<suffix>` mirror header, else the pre-rename
+/// `X-Dottie-<suffix>` (the Wally proxy still sends those).
+fn mirror_header(headers: &HeaderMap, suffix: &str) -> Option<String> {
+    header_trim(headers, &format!("x-apex-{suffix}"))
+        .or_else(|| header_trim(headers, &format!("x-dottie-{suffix}")))
+}
+
+/// True when `X-Apex-Mirror-Key` (or `X-Dottie-Mirror-Key`) matches the
+/// mirror key. The Wally proxy sets this so a server-side forward can pass
+/// the real visitor IP and country. A missing or wrong key is ignored.
 fn mirror_trusted(headers: &HeaderMap, mirror_key: &str) -> bool {
     if mirror_key.is_empty() {
         return false;
     }
-    let Some(got) = headers
-        .get("x-dottie-mirror-key")
-        .and_then(|v| v.to_str().ok())
-    else {
+    let Some(got) = mirror_header(headers, "mirror-key") else {
         return false;
     };
     safe_equal(mirror_key.as_bytes(), got.as_bytes())
@@ -76,17 +85,17 @@ fn header_trim(headers: &HeaderMap, name: &str) -> Option<String> {
     if t.is_empty() { None } else { Some(t.to_string()) }
 }
 
-/// Client IP: a trusted mirror's `X-Dottie-Visitor-Ip`, else `CF-Connecting-IP`
+/// Client IP: a trusted mirror's `X-Apex-Visitor-Ip` (or `X-Dottie-`), else `CF-Connecting-IP`
 /// (Cloudflare sets this; not spoofable at the origin), else first
 /// `X-Forwarded-For` segment, else `X-Real-IP`, else `"unknown"`.
 pub fn client_ip(headers: &HeaderMap) -> String {
-    let key = std::env::var("DOTTIE_MIRROR_KEY").unwrap_or_default();
+    let key = mirror_key_env();
     client_ip_for(headers, &key)
 }
 
 pub(crate) fn client_ip_for(headers: &HeaderMap, mirror_key: &str) -> String {
     if mirror_trusted(headers, mirror_key) {
-        if let Some(ip) = header_trim(headers, "x-dottie-visitor-ip") {
+        if let Some(ip) = mirror_header(headers, "visitor-ip") {
             return ip;
         }
     }
@@ -117,15 +126,15 @@ pub(crate) fn client_ip_for(headers: &HeaderMap, mirror_key: &str) -> String {
 
 /// User-Agent for a live hit. Cloudflare only lets the Dottie user-agent
 /// through, so a trusted mirror sends that on `User-Agent` and the visitor's
-/// real agent on `X-Dottie-User-Agent`.
+/// real agent on `X-Apex-User-Agent` (or `X-Dottie-User-Agent`).
 pub fn visitor_user_agent(headers: &HeaderMap) -> String {
-    let key = std::env::var("DOTTIE_MIRROR_KEY").unwrap_or_default();
+    let key = mirror_key_env();
     visitor_user_agent_for(headers, &key)
 }
 
 pub(crate) fn visitor_user_agent_for(headers: &HeaderMap, mirror_key: &str) -> String {
     if mirror_trusted(headers, mirror_key) {
-        if let Some(ua) = header_trim(headers, "x-dottie-user-agent") {
+        if let Some(ua) = mirror_header(headers, "user-agent") {
             return ua;
         }
     }
@@ -135,22 +144,22 @@ pub(crate) fn visitor_user_agent_for(headers: &HeaderMap, mirror_key: &str) -> S
 /// True when this request carries a matching mirror key. Cloudflare bot
 /// headers on that request describe the proxy, not the visitor.
 pub(crate) fn mirror_trusted_env(headers: &HeaderMap) -> bool {
-    let key = std::env::var("DOTTIE_MIRROR_KEY").unwrap_or_default();
+    let key = mirror_key_env();
     mirror_trusted(headers, &key)
 }
 
-/// Country for a live hit. A trusted mirror may pass `X-Dottie-Country`
+/// Country for a live hit. A trusted mirror may pass `X-Apex-Country` (or `X-Dottie-`)
 /// (the visitor's `CF-IPCountry` from the edge in front of `aob`). Otherwise
 /// use `CF-IPCountry` on this request. `XX` and anything that is not 2 letters
 /// is treated as unknown.
 pub fn visitor_country(headers: &HeaderMap) -> Option<String> {
-    let key = std::env::var("DOTTIE_MIRROR_KEY").unwrap_or_default();
+    let key = mirror_key_env();
     visitor_country_for(headers, &key)
 }
 
 pub(crate) fn visitor_country_for(headers: &HeaderMap, mirror_key: &str) -> Option<String> {
     let raw = if mirror_trusted(headers, mirror_key) {
-        header_trim(headers, "x-dottie-country")
+        mirror_header(headers, "country")
             .or_else(|| header_trim(headers, "cf-ipcountry"))
     } else {
         header_trim(headers, "cf-ipcountry")
@@ -635,6 +644,18 @@ mod tests {
             ),
             "Mozilla/5.0 Dottie/2026.7.6",
             "without the mirror key the visitor user-agent is ignored"
+        );
+        assert_eq!(
+            client_ip_for(
+                &headers_from(&[
+                    ("x-apex-mirror-key", "sekret"),
+                    ("x-apex-visitor-ip", "203.0.113.9"),
+                    ("x-dottie-visitor-ip", "203.0.113.8"),
+                ]),
+                "sekret",
+            ),
+            "203.0.113.9",
+            "X-Apex-* mirror headers win over the pre-rename X-Dottie-*"
         );
     }
 }

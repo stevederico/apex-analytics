@@ -1,4 +1,4 @@
-# Dottie Analytics API
+# Apex Analytics API
 
 > First-party telemetry + web-analytics service (an Umami replacement) served from your own host.
 > Ingests desktop app pings/events, serves the admin reports behind the dashboard, hosts
@@ -6,7 +6,7 @@
 > public web: `/` is 404, bots disallowed, every response carries `X-Robots-Tag: noindex`.
 
 ## Auth
-- Report/admin endpoints: `Authorization: Bearer <DOTTIE_ADMIN_KEY>`. Wrong/missing key → **404** (not 401/403), so endpoints look nonexistent to probes. Comparisons are timing-safe.
+- Report/admin endpoints: `Authorization: Bearer <APEX_ADMIN_KEY>`. Wrong/missing key → **404** (not 401/403), so endpoints look nonexistent to probes. Comparisons are timing-safe.
 - Web-analytics ingest (`POST /api/send`): public, keyed by the site `write_key` in `payload.website` (unknown → 404).
 - Desktop ingest (`/api/ping`, `/api/events`, `/api/diagnostics`): per-user bearer from /api/register (the shared X-Dottie-Client key is retired).
 - Landing ingest (`/api/landing-event`, `/api/landing-visit`): public but origin-locked to `LANDING_ALLOWED_ORIGIN` (unset → refused).
@@ -74,7 +74,7 @@ Precedence: `all=1|true` (everything) → `from=YYYY-MM-DD&to=YYYY-MM-DD` (inclu
 - POST /api/import/github-growth — bulk downloads+metrics load (max 10,000 rows)
 
 ## Dashboard data path
-The browser dashboard uses gRPC-Web (`dottie.admin.v1.Admin/*`, same admin bearer, wrong key → NOT_FOUND) — unary Get* + server-streaming StreamStats/Series/Issues/Site*. REST `/api/*` above stays for scripts/desktop/public ingest.
+The browser dashboard uses gRPC-Web (`apex.admin.v1.Admin/*`, same admin bearer, wrong key → NOT_FOUND) — unary Get* + server-streaming StreamStats/Series/Issues/Site*. REST `/api/*` above stays for scripts/desktop/public ingest.
 
 ## Human docs
 `https://<your-host>/docs`

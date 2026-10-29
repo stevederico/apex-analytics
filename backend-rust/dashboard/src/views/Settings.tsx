@@ -8,7 +8,7 @@ import { VERSION } from '../version';
 
 /** Fired so Shell reloads the site switcher list after create. Kept here since
  *  AddSiteButton (header "+") imports it. */
-export const SITES_CHANGED = 'dottie:sites-changed';
+export const SITES_CHANGED = 'apex:sites-changed';
 
 /** Sidebar-footer Settings: admin session + generic install reference.
  *  Site creation lives in the header "+" (AddSiteButton); the per-site snippet
@@ -42,7 +42,7 @@ export default function Settings({ onSignOut }: { onSignOut: () => void }) {
               <div className="font-mono text-sm">{VERSION}</div>
             </div>
             <Button variant="outline" onClick={onSignOut} className="w-full">Sign out</Button>
-            <p className="text-muted-foreground text-xs">Served by dottie-analytics · /dashboard</p>
+            <p className="text-muted-foreground text-xs">Served by apex-analytics · /dashboard</p>
           </CardContent>
         </Card>
       </div>
@@ -77,7 +77,7 @@ export default function Settings({ onSignOut }: { onSignOut: () => void }) {
             </Button>
             <p className="text-muted-foreground text-[11px]">
               Visitors can opt out per-site with{' '}
-              <span className="font-mono">localStorage.setItem(&apos;dottie.disabled&apos;,&apos;1&apos;)</span>.
+              <span className="font-mono">localStorage.setItem(&apos;apex.disabled&apos;,&apos;1&apos;)</span>.
             </p>
           </CardContent>
         </Card>

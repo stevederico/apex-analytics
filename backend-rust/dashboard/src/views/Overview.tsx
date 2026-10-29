@@ -33,14 +33,14 @@ export default function Overview() {
   // stay unary (they're a historical picker window, not a live feed).
   const stats = useStream<Stats>('StreamStats', () => encodeStreamOpts(), []);
   const [range, setRange] = useState<RangeQuery>(() => {
-    const d = localStorage.getItem('dottie_dash_range') || '30';
+    const d = localStorage.getItem('apex_dash_range') || '30';
     return { query: `days=${d}`, label: `${d}d` };
   });
   const onQueryChange = useCallback((q: RangeQuery) => setRange(q), []);
-  const [metric, setMetric] = useState(() => localStorage.getItem('dottie_dash_metric') || 'dau');
+  const [metric, setMetric] = useState(() => localStorage.getItem('apex_dash_metric') || 'dau');
   const pickMetric = useCallback((m: string) => {
     setMetric(m);
-    localStorage.setItem('dottie_dash_metric', m);
+    localStorage.setItem('apex_dash_metric', m);
   }, []);
 
   // KPI cards follow the header range — same series endpoint as the chart.
@@ -93,7 +93,7 @@ export default function Overview() {
             metrics={METRICS}
             metric={metric}
             onMetricChange={pickMetric}
-            storageKeys={{ metric: 'dottie_dash_metric', range: 'dottie_dash_range' }}
+            storageKeys={{ metric: 'apex_dash_metric', range: 'apex_dash_range' }}
             onQueryChange={onQueryChange}
             fetchSeries={fetchMetric}
           />

@@ -1,4 +1,4 @@
-//! dottie-analytics — Rust port on the mainstream axum + tokio + sqlx stack.
+//! apex-analytics — Rust port on the mainstream axum + tokio + sqlx stack.
 //!
 //! This scaffold boots an axum server with a /health route to prove the
 //! toolchain, and constructs the sqlx SqlitePool + runs migrations at startup.
@@ -8,10 +8,10 @@
 
 use std::collections::HashSet;
 
-use dottie_analytics::app::{build_app, AppState};
-use dottie_analytics::db::Db;
-use dottie_analytics::github;
-use dottie_analytics::reports::ReportExclude;
+use apex_analytics::app::{build_app, AppState};
+use apex_analytics::db::Db;
+use apex_analytics::github;
+use apex_analytics::reports::ReportExclude;
 
 #[tokio::main]
 async fn main() {
@@ -24,11 +24,21 @@ async fn main() {
         .init();
 
     // DB path: DATABASE_URL (strip any sqlite:// scheme) or DB_PATH, else the
-    // default production file. Mirrors db.js's DB_PATH default.
+    // default local file. A checkout that predates the rename keeps using its
+    // existing `dottie-api.db` instead of starting an empty `apex-api.db`.
     let db_path = std::env::var("DATABASE_URL")
         .map(|u| u.trim_start_matches("sqlite://").to_string())
         .or_else(|_| std::env::var("DB_PATH"))
-        .unwrap_or_else(|_| "./databases/dottie-api.db".to_string());
+        .unwrap_or_else(|_| {
+            let legacy = "./databases/dottie-api.db";
+            if !std::path::Path::new("./databases/apex-api.db").exists()
+                && std::path::Path::new(legacy).exists()
+            {
+                legacy.to_string()
+            } else {
+                "./databases/apex-api.db".to_string()
+            }
+        });
 
     // Ensure the parent directory exists (create_if_missing only makes the file).
     if let Some(parent) = std::path::Path::new(&db_path).parent() {

@@ -9,9 +9,9 @@ export interface Scope {
   id: string;
 }
 
-const KEY = 'dottie_dash_scope';
+const KEY = 'apex_dash_scope';
 /** Legacy key used before repos joined the switcher. */
-const LEGACY_SITE_KEY = 'dottie_dash_site';
+const LEGACY_SITE_KEY = 'apex_dash_site';
 
 export function loadScope(): Scope {
   const raw = localStorage.getItem(KEY);

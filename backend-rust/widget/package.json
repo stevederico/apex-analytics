@@ -1,5 +1,5 @@
 {
-  "name": "dottie-feedback-widget",
+  "name": "apex-feedback-widget",
   "private": true,
   "type": "module",
   "description": "Feedback widget served at /feedback.js (ported from feedback-assistant). Built to dist/ and embedded into the Rust binary.",

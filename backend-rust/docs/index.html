@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dottie Analytics API</title>
+    <title>Apex Analytics API</title>
     <link rel="icon" href="/docs/favicon.ico">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -165,8 +165,8 @@
         <div class="sidebar-header">
             <div class="sidebar-top-row">
                 <div class="sidebar-logo">
-                    <img src="/docs/icon.png?v=2" alt="Dottie">
-                    <span class="name">Dottie</span>
+                    <img src="/docs/icon.png?v=2" alt="Apex">
+                    <span class="name">Apex</span>
                     <span class="api">Analytics</span>
                 </div>
                 <button class="theme-btn" onclick="toggleTheme()" title="Toggle dark mode" id="theme-btn">
@@ -208,8 +208,8 @@
         <div class="content" id="content">
             <!-- Introduction -->
             <div class="intro" id="introduction">
-                <p>The Dottie Analytics API is a first-party telemetry and web-analytics service (an Umami replacement) at this server's origin (the host serving this page). It ingests desktop app pings and product events, serves the admin reports behind the dashboard, hosts multi-tenant website analytics, and tracks GitHub growth.</p>
-                <p>The service is deliberately invisible to the public web: the root <code>/</code> returns 404, bots are disallowed, and every response carries <code>X-Robots-Tag: noindex, nofollow, noarchive</code>. Report and admin endpoints require <code>Authorization: Bearer &lt;DOTTIE_ADMIN_KEY&gt;</code>; a missing or wrong key returns <strong>404</strong> (not 401/403) so endpoints look nonexistent to probes.</p>
+                <p>The Apex Analytics API is a first-party telemetry and web-analytics service (an Umami replacement) at this server's origin (the host serving this page). It ingests desktop app pings and product events, serves the admin reports behind the dashboard, hosts multi-tenant website analytics, and tracks GitHub growth.</p>
+                <p>The service is deliberately invisible to the public web: the root <code>/</code> returns 404, bots are disallowed, and every response carries <code>X-Robots-Tag: noindex, nofollow, noarchive</code>. Report and admin endpoints require <code>Authorization: Bearer &lt;APEX_ADMIN_KEY&gt;</code>; a missing or wrong key returns <strong>404</strong> (not 401/403) so endpoints look nonexistent to probes.</p>
                 <p>Public ingest is separate: <code>POST /api/send</code> (web analytics) is keyed by each site's <code>write_key</code> in the body, and desktop writes use the per-user bearer from <code>/api/register</code>. REST bodies cap at 4&nbsp;KiB. For a machine-readable index, see <a href="/docs/llms.txt" style="color:var(--accent)">llms.txt</a>.</p>
                 <div style="border-top: 1px solid var(--border); margin-top: 24px; padding-top: 20px;">
                     <strong style="font-size: 14px;">Related</strong>
@@ -246,13 +246,13 @@
 
 <script>
 const BASE = window.location.origin;
-const TOKEN = '$DOTTIE_ADMIN_KEY';
+const TOKEN = '$APEX_ADMIN_KEY';
 let currentLang = 'javascript';
 
 // ── Endpoint data ────────────────────────────────────────────────────────
 
 const SECTIONS = [
-  { id: 'authentication', title: 'Authentication', desc: 'Report and admin endpoints require an admin bearer token: Authorization: Bearer <DOTTIE_ADMIN_KEY>. A missing or wrong key returns 404 (not 401/403) — endpoints look nonexistent to probes. Public ingest is keyed differently: web-analytics writes carry the site write_key in the body, and desktop writes use the per-user bearer from /api/register. Comparisons are timing-safe; every response is marked noindex.', endpoints: [] },
+  { id: 'authentication', title: 'Authentication', desc: 'Report and admin endpoints require an admin bearer token: Authorization: Bearer <APEX_ADMIN_KEY>. A missing or wrong key returns 404 (not 401/403) — endpoints look nonexistent to probes. Public ingest is keyed differently: web-analytics writes carry the site write_key in the body, and desktop writes use the per-user bearer from /api/register. Comparisons are timing-safe; every response is marked noindex.', endpoints: [] },
 
   // ── Core / ingest ────────────────────────────────────────────────────────
 
@@ -321,14 +321,14 @@ const SECTIONS = [
   ]},
 
   { id: 'feedback', title: 'Feedback', desc: 'In-app feedback widget (absorbed from feedback-assistant). Sites embed it via &lt;script defer src="' + BASE + '/feedback.js" data-website-id="&lt;write_key&gt;"&gt; (same write_key as the tracker). The widget posts multipart/form-data (no preflight) with an optional JPEG/PNG screenshot. Message ≤5000 UTF-16 chars and screenshot ≤2 MiB, else 413; other image types 415; 20/min per IP; per-site budget FEEDBACK_DAILY_BUDGET (default 1000) per rolling 24h → 429. Unknown write_key → 404. Admin reads take the admin or read key; status changes need the admin key.', endpoints: [
-    { m: 'GET', p: '/feedback.js', d: 'The widget (public, cached 5 min). Exposes DottieFeedback.init / identify({ id, name, email }) / show(). html2canvas lazy-loads from /feedback/html2canvas-v1.js on first screenshot.', noAuth: true, res: 'text/javascript widget source' },
+    { m: 'GET', p: '/feedback.js', d: 'The widget (public, cached 5 min). Exposes ApexFeedback.init / identify({ id, name, email }) / show(). html2canvas lazy-loads from /feedback/html2canvas-v1.js on first screenshot.', noAuth: true, res: 'text/javascript widget source' },
     { m: 'POST', p: '/api/feedback', d: 'Submit feedback. multipart/form-data (fields below + optional file part) or JSON (no screenshot). CORS reflects the caller origin.', noAuth: true,
       params: [
         ['website', 'string', 'required — site write_key.'],
         ['message', 'string', 'required — ≤5000 UTF-16 chars (413 over).'],
         ['url', 'string', 'optional — page URL (clamped 2000).'],
         ['appVersion', 'string', 'optional — (clamped 64).'],
-        ['endUserId / endUserName / endUserEmail', 'string', 'optional — from DottieFeedback.identify.'],
+        ['endUserId / endUserName / endUserEmail', 'string', 'optional — from ApexFeedback.identify.'],
         ['file', 'file', 'optional, multipart only — image/jpeg or image/png, ≤2 MiB.']
       ],
       body: { website: 'wk_…', message: 'The export button does nothing', url: 'https://example.com/cart' },
@@ -666,7 +666,7 @@ function render() {
         // Auth special
         if (s.id === 'authentication') {
             html += `<div class="auth-grid">
-                <div class="auth-box"><code>Authorization: Bearer &lt;DOTTIE_ADMIN_KEY&gt;</code><p class="hint">Set once in the dashboard (localStorage → bearer). A wrong or missing key returns <code>404</code>, not 401/403. Public ingest uses the site <code>write_key</code> or the desktop user bearer instead.</p></div>
+                <div class="auth-box"><code>Authorization: Bearer &lt;APEX_ADMIN_KEY&gt;</code><p class="hint">Set once in the dashboard (localStorage → bearer). A wrong or missing key returns <code>404</code>, not 401/403. Public ingest uses the site <code>write_key</code> or the desktop user bearer instead.</p></div>
                 <div class="code-block"><div class="code-header"><span style="font-size:11px;color:#94a3b8;">Example</span></div><div class="code-body"><pre>curl ${BASE}/api/stats \\
   -H "Authorization: Bearer ${TOKEN}"</pre></div></div>
             </div>`;
@@ -732,7 +732,7 @@ function render() {
         content.insertAdjacentHTML('beforeend', html);
     });
 
-    content.insertAdjacentHTML('beforeend', '<div class="footer">Dottie Analytics API &middot; ' + window.location.host + ' &middot; Admin bearer auth &middot; 404-on-bad-key</div>');
+    content.insertAdjacentHTML('beforeend', '<div class="footer">Apex Analytics API &middot; ' + window.location.host + ' &middot; Admin bearer auth &middot; 404-on-bad-key</div>');
     updateActiveNav();
 }
 

@@ -1,4 +1,4 @@
-//! dottie-analytics library crate — exposes the app modules so both the binary
+//! apex-analytics library crate — exposes the app modules so both the binary
 //! (`main.rs`) and the integration tests under `tests/` can build the router and
 //! drive it via `tower::ServiceExt::oneshot`.
 

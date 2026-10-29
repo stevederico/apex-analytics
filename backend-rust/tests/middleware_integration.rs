@@ -9,8 +9,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use dottie_analytics::app::{build_app, AppState, VersionConfig};
-use dottie_analytics::db::{Db, RegisterUser};
+use apex_analytics::app::{build_app, AppState, VersionConfig};
+use apex_analytics::db::{Db, RegisterUser};
 use tower::ServiceExt; // for `oneshot`
 
 const ADMIN_KEY: &str = "test-admin-key-0000000000";
@@ -532,7 +532,7 @@ async fn landing_origin_config_is_normalized() {
     // A configured origin with a trailing slash or capitals still matches the
     // lowercase Origin a browser sends; a missing Origin is still refused.
     let (db, p) = fresh_db().await;
-    let configured = dottie_analytics::app::normalize_origin(" HTTPS://WWW.Example.com/ ");
+    let configured = apex_analytics::app::normalize_origin(" HTTPS://WWW.Example.com/ ");
     assert_eq!(configured, LANDING_ALLOWED_ORIGIN);
     let app = build_app(state_for(db).with_landing_origin(configured));
     let preflight = |origin: Option<&str>| {

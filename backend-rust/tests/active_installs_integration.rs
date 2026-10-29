@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use dottie_analytics::db::Db;
+use apex_analytics::db::Db;
 use serde_json::Value;
 
 const DAY: i64 = 24 * 60 * 60 * 1000;

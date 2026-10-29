@@ -1,6 +1,6 @@
 import stylesText from './styles.css?inline';
 
-// Dottie feedback widget, ported from feedback-assistant. One tag:
+// Apex feedback widget, ported from feedback-assistant. One tag:
 //   <script defer src="https://your-host/feedback.js" data-website-id="WRITE_KEY">
 // data-website-id is the site's write_key (the same one /script.js takes).
 // Submissions go to <script origin>/api/feedback as multipart/form-data: a
@@ -154,7 +154,8 @@ function ensureShadowRoot() {
   if (STATE.refs.host) return STATE.refs;
 
   const host = document.createElement('div');
-  host.setAttribute('data-dottie-feedback', '');
+  host.setAttribute('data-apex-feedback', '');
+  host.setAttribute('data-dottie-feedback', ''); // pre-rename hook for host-page CSS
   host.style.all = 'initial';
   document.body.appendChild(host);
 
@@ -421,10 +422,10 @@ async function handleSend() {
 // NOTE: default export (not named). vite's IIFE build exposes the module's
 // default export as the global; a named export would expose the namespace
 // object instead, hiding init/identify/show one level deeper.
-const DottieFeedback = {
+const ApexFeedback = {
   init(options = {}) {
     if (!options.website) {
-      console.warn('[DottieFeedback] website (the site write_key) is required');
+      console.warn('[ApexFeedback] website (the site write_key) is required');
       return;
     }
     STATE.config.website = options.website;
@@ -455,7 +456,7 @@ if (typeof document !== 'undefined') {
   // server maps it to a site, so an old embed served this file keeps working.
   const website = tag && (tag.getAttribute('data-website-id') || tag.getAttribute('data-project'));
   if (website) {
-    const start = () => DottieFeedback.init({
+    const start = () => ApexFeedback.init({
       website,
       apiUrl: tag.getAttribute('data-host') || WIDGET_ORIGIN,
       appVersion: tag.getAttribute('data-app-version'),
@@ -466,7 +467,8 @@ if (typeof document !== 'undefined') {
 }
 
 if (typeof window !== 'undefined') {
-  window.DottieFeedback = DottieFeedback;
+  // DottieFeedback is the pre-rename global; pages that call it keep working.
+  window.ApexFeedback = window.DottieFeedback = ApexFeedback;
 }
 
-export default DottieFeedback;
+export default ApexFeedback;

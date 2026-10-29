@@ -1,11 +1,11 @@
 /**
- * Minimal gRPC-Web client for dottie.admin.v1.Admin.
+ * Minimal gRPC-Web client for apex.admin.v1.Admin.
  *
  * Unary + server streaming (xAI-style). Hand-rolled wire codec (no codegen).
  * Framing: gRPC-Web binary (`application/grpc-web+proto`).
  */
 
-const SERVICE = 'dottie.admin.v1.Admin';
+const SERVICE = 'apex.admin.v1.Admin';
 
 // ---- protobuf wire (subset) ------------------------------------------------
 
@@ -299,7 +299,7 @@ export async function grpcUnary(
     headers: {
       'content-type': 'application/grpc-web+proto',
       'x-grpc-web': '1',
-      'x-user-agent': 'dottie-dashboard',
+      'x-user-agent': 'apex-dashboard',
       authorization: 'Bearer ' + token,
     },
     body: framed.buffer.slice(framed.byteOffset, framed.byteOffset + framed.byteLength) as ArrayBuffer,
@@ -358,7 +358,7 @@ export async function* grpcJsonStream<T>(
     headers: {
       'content-type': 'application/grpc-web+proto',
       'x-grpc-web': '1',
-      'x-user-agent': 'dottie-dashboard',
+      'x-user-agent': 'apex-dashboard',
       authorization: 'Bearer ' + token,
     },
     body: framed.buffer.slice(framed.byteOffset, framed.byteOffset + framed.byteLength) as ArrayBuffer,

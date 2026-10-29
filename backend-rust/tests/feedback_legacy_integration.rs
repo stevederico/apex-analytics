@@ -9,8 +9,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use axum::Router;
-use dottie_analytics::app::{build_app, AppState, VersionConfig};
-use dottie_analytics::db::Db;
+use apex_analytics::app::{build_app, AppState, VersionConfig};
+use apex_analytics::db::Db;
 use http_body_util::BodyExt;
 use serde_json::Value;
 use tower::ServiceExt; // for `oneshot`

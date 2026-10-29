@@ -1,19 +1,21 @@
 #!/usr/bin/env node
 // Print a daily analytics snapshot. Hits /api/stats, /api/stats/retention,
 // /api/stats/active, /api/stats/errors and pretty-prints. Read-only, so it
-// prefers the low-privilege DOTTIE_READ_KEY and falls back to DOTTIE_ADMIN_KEY.
+// prefers the low-privilege APEX_READ_KEY and falls back to APEX_ADMIN_KEY
+// (pre-rename DOTTIE_* names still work).
 //
 // Usage:
-//   DOTTIE_READ_KEY=... DOTTIE_API_BASE=https://analytics.example.com node scripts/daily_report.js
+//   APEX_READ_KEY=... APEX_API_BASE=https://analytics.example.com node scripts/daily_report.js
 
-const BASE = process.env.DOTTIE_API_BASE;
+const env = (name) => process.env[`APEX_${name}`] || process.env[`DOTTIE_${name}`];
+const BASE = env("API_BASE");
 if (!BASE) {
-  console.error("DOTTIE_API_BASE not set (e.g. https://analytics.example.com)");
+  console.error("APEX_API_BASE not set (e.g. https://analytics.example.com)");
   process.exit(1);
 }
-const KEY = process.env.DOTTIE_READ_KEY || process.env.DOTTIE_ADMIN_KEY;
+const KEY = env("READ_KEY") || env("ADMIN_KEY");
 if (!KEY) {
-  console.error("DOTTIE_READ_KEY (or DOTTIE_ADMIN_KEY) not set");
+  console.error("APEX_READ_KEY (or APEX_ADMIN_KEY) not set");
   process.exit(1);
 }
 

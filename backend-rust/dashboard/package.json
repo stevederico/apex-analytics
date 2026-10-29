@@ -1,8 +1,8 @@
 {
-  "name": "dottie-dashboard",
+  "name": "apex-dashboard",
   "private": true,
   "type": "module",
-  "description": "dottie-analytics admin dashboard — React/Vite skateboard app, built to dist/ and embedded into the Rust binary (served at /dashboard).",
+  "description": "apex-analytics admin dashboard — React/Vite skateboard app, built to dist/ and embedded into the Rust binary (served at /dashboard).",
   "scripts": {
     "dev": "vite",
     "build": "npm run typecheck && vite build",

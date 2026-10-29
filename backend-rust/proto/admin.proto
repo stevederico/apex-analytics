@@ -2,7 +2,7 @@
 // public ingest; the SPA at /dashboard talks to this service instead.
 syntax = "proto3";
 
-package dottie.admin.v1;
+package apex.admin.v1;
 
 service Admin {
   // ---- unary (one-shot, same shapes as REST) ----

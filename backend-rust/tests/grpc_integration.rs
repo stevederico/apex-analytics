@@ -6,8 +6,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use dottie_analytics::app::{build_app, AppState, VersionConfig};
-use dottie_analytics::db::Db;
+use apex_analytics::app::{build_app, AppState, VersionConfig};
+use apex_analytics::db::Db;
 use http_body_util::BodyExt;
 use tower::ServiceExt;
 
@@ -78,7 +78,7 @@ fn frame(msg: &[u8]) -> Vec<u8> {
 fn grpc_req(method: &str, body: Vec<u8>, auth: Option<&str>) -> Request<Body> {
     let mut b = Request::builder()
         .method("POST")
-        .uri(format!("/dottie.admin.v1.Admin/{method}"))
+        .uri(format!("/apex.admin.v1.Admin/{method}"))
         .header("content-type", "application/grpc-web+proto")
         .header("x-grpc-web", "1");
     if let Some(a) = auth {

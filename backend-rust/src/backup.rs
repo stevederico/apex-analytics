@@ -38,7 +38,7 @@ pub async fn ops_db_backup(State(state): State<AppState>) -> Response {
         .map(|d| d.as_millis())
         .unwrap_or(0);
     let path = dir.join(format!(
-        "dottie-analytics-backup-{stamp}-{}.db",
+        "apex-analytics-backup-{stamp}-{}.db",
         SEQ.fetch_add(1, Ordering::Relaxed)
     ));
     let path_str = path.to_string_lossy().to_string();

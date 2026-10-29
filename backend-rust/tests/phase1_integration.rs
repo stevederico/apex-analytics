@@ -9,8 +9,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use axum::body::Body;
 use axum::http::{Request, Response, StatusCode};
-use dottie_analytics::app::{build_app, AppState, VersionConfig};
-use dottie_analytics::db::Db;
+use apex_analytics::app::{build_app, AppState, VersionConfig};
+use apex_analytics::db::Db;
 use flate2::write::GzEncoder;
 use flate2::Compression;
 use tower::ServiceExt; // for `oneshot`
@@ -946,7 +946,7 @@ async fn report_site_daily_rollup() {
     assert!(ct.starts_with("text/markdown"), "ct={ct}");
     let bytes = axum::body::to_bytes(md.into_body(), usize::MAX).await.unwrap();
     let text = String::from_utf8(bytes.to_vec()).unwrap();
-    assert!(text.contains("# Dottie Sites Daily"), "body: {text}");
+    assert!(text.contains("# Apex Sites Daily"), "body: {text}");
     assert!(text.contains("| Site |"), "body: {text}");
 
     // Admin-gated: no key → 404.
@@ -1062,8 +1062,13 @@ async fn collect_live_ingest_and_script() {
     assert!(text.contains("data-website-id"), "tracker reads website id");
     assert!(text.contains("/api/send"), "tracker posts to send (not collect — adblock)");
     assert!(text.contains("data-umami-event"), "click attr parity");
-    assert!(text.contains("identify"), "dottie.identify");
-    assert!(text.contains("dottie={track:"), "dottie.track surface");
+    assert!(text.contains("identify"), "apex.identify");
+    assert!(
+        text.contains("window.apex=window.dottie={track:"),
+        "apex.track surface, with the pre-rename window.dottie alias"
+    );
+    assert!(text.contains("data-apex-event"), "apex click attr");
+    assert!(text.contains("data-dottie-event"), "pre-rename click attr still matched");
 
     cleanup(&p);
 }

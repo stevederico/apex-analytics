@@ -136,6 +136,14 @@ fn env_or(key: &str, fallback: &str) -> String {
     std::env::var(key).ok().filter(|v| !v.is_empty()).unwrap_or_else(|| fallback.to_string())
 }
 
+/// First non-empty value among `keys`, else "". Lets a renamed variable
+/// (`APEX_*`) win while the pre-rename name (`DOTTIE_*`) keeps working.
+pub fn env_first(keys: &[&str]) -> String {
+    keys.iter()
+        .find_map(|k| std::env::var(k).ok().filter(|v| !v.is_empty()))
+        .unwrap_or_default()
+}
+
 impl AppState {
     /// Construct from explicit pieces (used by tests and by `from_env`).
     pub fn new(db: Db, admin_key: String, version: VersionConfig) -> AppState {
@@ -184,15 +192,16 @@ impl AppState {
         self
     }
 
-    /// Build state from env: `DOTTIE_ADMIN_KEY`, `DOTTIE_READ_KEY`,
+    /// Build state from env: `APEX_ADMIN_KEY`, `APEX_READ_KEY` (each falling
+    /// back to its pre-rename `DOTTIE_*` name),
     /// `DOTTIE_LATEST_VERSION` (default "7.99"), `DOTTIE_MIN_VERSION` (default
     /// "7.99"), `DOTTIE_DOWNLOAD_URL` (default the GitHub releases URL), plus
     /// `GITHUB_TOKEN` / `GITHUB_REPOS` for the growth-chart merge. Missing
     /// keys default to "" — which disables that guard's key branch entirely (an
     /// empty key never matches), exactly like the JS `?? ""`.
     pub fn from_env(db: Db) -> AppState {
-        let admin_key = std::env::var("DOTTIE_ADMIN_KEY").unwrap_or_default();
-        let read_key = std::env::var("DOTTIE_READ_KEY").unwrap_or_default();
+        let admin_key = env_first(&["APEX_ADMIN_KEY", "DOTTIE_ADMIN_KEY"]);
+        let read_key = env_first(&["APEX_READ_KEY", "DOTTIE_READ_KEY"]);
         let version = VersionConfig {
             latest: std::env::var("DOTTIE_LATEST_VERSION").unwrap_or_else(|_| "7.99".to_string()),
             min: std::env::var("DOTTIE_MIN_VERSION").unwrap_or_else(|_| "7.99".to_string()),
@@ -726,4 +735,25 @@ pub fn build_app(state: AppState) -> Router {
                 ))
                 .layer(TraceLayer::new_for_http()),
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::env_first;
+
+    #[test]
+    fn env_first_prefers_new_name_and_falls_back_to_old() {
+        // Unique names so parallel tests never race on the same variable.
+        std::env::set_var("ENV_FIRST_TEST_OLD", "old");
+        assert_eq!(env_first(&["ENV_FIRST_TEST_NEW", "ENV_FIRST_TEST_OLD"]), "old");
+        std::env::set_var("ENV_FIRST_TEST_NEW", "");
+        assert_eq!(
+            env_first(&["ENV_FIRST_TEST_NEW", "ENV_FIRST_TEST_OLD"]),
+            "old",
+            "an empty new value does not mask the old one"
+        );
+        std::env::set_var("ENV_FIRST_TEST_NEW", "new");
+        assert_eq!(env_first(&["ENV_FIRST_TEST_NEW", "ENV_FIRST_TEST_OLD"]), "new");
+        assert_eq!(env_first(&["ENV_FIRST_TEST_MISSING"]), "");
+    }
 }
