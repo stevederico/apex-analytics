@@ -2,7 +2,7 @@
 
 # apex-analytics
 
-### a rust + axum + sqlite service for dottie's registration, install pings, stats, first-party web analytics, and in-app feedback
+### privacy-first analytics for your sites and apps, one rust binary and a sqlite file
 
 </div>
 
@@ -77,7 +77,7 @@ Formerly **dottie-analytics**. The pre-rename `DOTTIE_ADMIN_KEY`, `DOTTIE_READ_K
 | Variable | Purpose |
 |---|---|
 | `APEX_ADMIN_KEY` | Your private bearer token for `/api/stats` and the admin dashboard |
-| `DB_PATH` | SQLite file path (default `./databases/dottie-api.db`; use a mounted volume in production) |
+| `DB_PATH` | SQLite file path (default `./databases/apex-api.db`, or an existing pre-rename `dottie-api.db`; use a mounted volume in production) |
 | `PORT` | HTTP port (default `8080`) |
 | `GITHUB_TOKEN` | GitHub PAT for traffic metrics (clones/views); optional for public release downloads |
 | `GITHUB_REPOS` | Comma-separated `owner/name[:kind]` list seeded into the growth tracker while it is empty. Unset → nothing tracked |
@@ -180,7 +180,7 @@ Any container host works. `Dockerfile.rust` builds a distroless image (no shell)
 docker build -f Dockerfile.rust -t apex-analytics .
 docker run -p 8080:8080 \
   -e APEX_ADMIN_KEY=... \
-  -e DB_PATH=/data/dottie-api.db \
+  -e DB_PATH=/data/apex-api.db \
   -v apex-data:/data \
   apex-analytics
 ```
